@@ -19,6 +19,8 @@ Free-form, unstructured force monitoring.
 - Displays current force (kg), peak force (kg), session duration
 - No timers, no targets, no protocols
 - Tare before starting
+- When the user stops measurement, prompt to save or discard the recording
+- Saved recordings appear in session history tagged as "Live Stream" with peak force, average force, and duration
 
 **Use cases:** max hang testing, grip exploration, device verification.
 
@@ -60,6 +62,23 @@ Structured interval training with configurable protocols, one hand at a time.
 9. **Session complete** → show summary → save
 
 The Progressor stays measuring continuously for each hand (including during rest phases). The timer only dictates the user's pull/rest rhythm.
+
+#### Pause & Resume
+
+The user can pause the session at any time during any phase (work, rest, countdown, hand switch).
+
+- **On pause:** BLE measurement stops, timer freezes at current position
+- **On resume:** tare, brief countdown, BLE measurement restarts, timer resumes from where it left off
+- Paused state is clearly indicated in the UI
+- The force data will have a gap corresponding to the pause duration (this is expected since no training is happening)
+
+#### Abort & Save
+
+The user can abort a session at any time. On abort:
+
+- Prompt to **save** or **discard** the partial session
+- If saved, the session is marked as incomplete and contains only the sets that were fully completed
+- Partial sessions appear in history with an "Incomplete" indicator
 
 #### UI During Work Phase
 
@@ -118,7 +137,7 @@ Max weight is always user-configured (not part of the default template).
 |----------|----------|
 | Device discovery | Auto-pick the first Progressor found |
 | Tare | Once at session start |
-| Mid-session abort | Discard partial data |
+| Mid-session abort | Prompt to save or discard partial data |
 | Connection loss | Pause session, attempt auto-reconnect, offer option to abort |
 | Multiple devices in range | Pick the first one found |
 
@@ -126,7 +145,9 @@ Max weight is always user-configured (not part of the default template).
 
 ## Session History
 
-- All completed sessions are saved
+- All completed sessions are saved automatically; partial sessions and live stream recordings are saved if the user chooses
+- Live stream sessions appear with protocol name "Live Stream"
+- Incomplete repeater sessions are marked with an "Incomplete" indicator
 - Browsable list with date, protocol name, summary stats
 - Drill into any session to view the full force-time curve
 - Export any session to CSV

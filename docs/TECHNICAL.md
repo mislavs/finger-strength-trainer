@@ -183,10 +183,18 @@ public record HandData(
     List<ForceSample> Samples,
     List<SetStats> Sets);
 
+public enum SessionType
+{
+    Repeater,
+    LiveStream
+}
+
 public record SessionSummary(
     Guid Id,
     DateTime Date,
-    string ProtocolName,
+    SessionType Type,
+    string ProtocolName,             // "Live Stream" for live stream sessions
+    bool IsComplete,
     double PeakForceKg,
     double AvgForceKg,
     TimeSpan Duration);
@@ -194,9 +202,18 @@ public record SessionSummary(
 public record TrainingSessionRecord(
     Guid Id,
     DateTime Date,
+    bool IsComplete,
     ProtocolDefinition Protocol,
     HandData Hand1,
-    HandData Hand2);
+    HandData? Hand2);                // null if aborted before hand 2
+
+public record LiveStreamRecord(
+    Guid Id,
+    DateTime Date,
+    List<ForceSample> Samples,
+    double PeakForceKg,
+    double AvgForceKg,
+    TimeSpan Duration);
 ```
 
 ### Timer State
@@ -209,11 +226,13 @@ public enum TimerPhase
     Work,
     Rest,
     HandSwitch,
+    Paused,
     Done
 }
 
 public record TimerState(
     TimerPhase Phase,
+    TimerPhase PhasePausedFrom,     // Which phase was active when paused (Idle if not paused)
     double RemainingSeconds,
     int CurrentSet,
     int TotalSets,
@@ -233,6 +252,8 @@ public record TimerState(
 | `TimerTick` | `TimerState` | ~10/sec |
 | `SetCompleted` | `SetStats` | After each work phase |
 | `SessionComplete` | `TrainingSessionRecord` | Once at end |
+| `LiveStreamStopped` | `LiveStreamRecord` | When user stops live stream |
+| `TrainingAborted` | `TrainingSessionRecord` | When user aborts repeater session |
 | `PlaySound` | `string` (sound type: "beep", "go", "rest", "done") | On transitions |
 | `ConnectionLost` | — | On BLE disconnect |
 | `Reconnected` | — | On BLE reconnect |
@@ -245,9 +266,15 @@ public record TimerState(
 | `Disconnect` | — | Disconnect from device |
 | `Tare` | — | Zero the scale |
 | `StartLiveStream` | — | Start free-form measurement |
-| `StopLiveStream` | — | Stop free-form measurement |
+| `StopLiveStream` | — | Stop free-form measurement (triggers save/discard prompt) |
+| `SaveLiveStream` | — | Save the stopped live stream recording |
+| `DiscardLiveStream` | — | Discard the stopped live stream recording |
 | `StartTraining` | `{ protocolId: Guid, firstHand: string }` | Start repeater session |
-| `StopTraining` | — | Abort session (discards data) |
+| `PauseTraining` | — | Pause session (stops BLE measurement, freezes timer) |
+| `ResumeTraining` | — | Resume session (tare, countdown, restart measurement) |
+| `StopTraining` | — | Abort session (triggers save/discard prompt) |
+| `SaveAbortedTraining` | — | Save the aborted partial session |
+| `DiscardAbortedTraining` | — | Discard the aborted partial session |
 | `SkipHandSwitch` | — | Skip remaining hand switch time |
 
 ---
@@ -316,12 +343,54 @@ Throttled to ~10/sec for UI
 SignalR Hub → "TimerTick"           → React timer display
 ```
 
-### Persistence (end of session)
+### Pause & Resume
 
+```
+User pauses (any phase)
+  ▼
+ProgressorService.StopMeasurement() → stops BLE data stream
+TimerService.Pause()                → freezes timer, records phase to resume into
+SignalR Hub → TimerTick (Phase=Paused, PhasePausedFrom=previous phase)
+  ▼
+User resumes
+  ▼
+ProgressorService.Tare()            → re-zero the scale
+Brief countdown (e.g., 3s)
+ProgressorService.StartMeasurement()→ restarts BLE data stream
+TimerService.Resume()               → continues from frozen state
+```
+
+### Persistence
+
+Sessions can be saved in three scenarios:
+
+**1. Repeater session completes normally:**
 ```
 TimerService fires OnComplete
   ▼
-TrainingSession.ToRecord()          → builds full session record with stats
+TrainingSession.ToRecord()          → builds full session record (IsComplete = true)
+  ▼
+SessionRepository.SaveAsync()       → SQLite via EF Core
+```
+
+**2. Repeater session aborted (user chooses to save):**
+```
+User aborts → StopTraining
+  ▼
+TrainingSession.ToRecord()          → builds partial record (IsComplete = false)
+  ▼
+Frontend prompts save/discard → SaveAbortedTraining
+  ▼
+SessionRepository.SaveAsync()       → SQLite via EF Core
+```
+
+**3. Live stream stopped (user chooses to save):**
+```
+User stops → StopLiveStream
+  ▼
+LiveStreamSession.ToRecord()        → builds LiveStreamRecord with peak/avg/duration
+  ▼
+Frontend prompts save/discard → SaveLiveStream
   ▼
 SessionRepository.SaveAsync()       → SQLite via EF Core
 ```
@@ -380,8 +449,10 @@ await characteristic.WriteValueAsync(
 
 Tables:
 - `Protocols` — saved protocol definitions
-- `Sessions` — session metadata (date, protocol ID, summary stats)
+- `Sessions` — session metadata (date, type, protocol ID, summary stats, is_complete flag)
 - `SessionSamples` — force samples per session (session ID, hand, weight, timestamp)
+
+The `Sessions` table stores both repeater and live stream sessions, distinguished by a `Type` column. Live stream sessions have no protocol ID and no hand/set structure.
 
 Alternatively, samples could be stored as a compressed binary blob per hand to reduce row count.
 
@@ -405,7 +476,7 @@ Right,1,0.0125,23.1
 | Package | Purpose |
 |---------|---------|
 | ASP.NET Core | HTTP host, SignalR |
-| Microsoft.Windows.SDK.Contracts (or target `net8.0-windows10.0.19041.0`) | WinRT Bluetooth APIs |
+| Microsoft.Windows.SDK.Contracts (or target `net10.0-windows10.0.19041.0`) | WinRT Bluetooth APIs |
 | Microsoft.EntityFrameworkCore.Sqlite | Session/protocol persistence |
 | CommunityToolkit.Mvvm (optional) | Observable patterns if needed |
 
@@ -426,6 +497,6 @@ Right,1,0.0125,23.1
 
 - Windows 10+ (for WinRT Bluetooth APIs)
 - Bluetooth adapter supporting BLE
-- .NET 8+
+- .NET 10
 - Node.js (build time only, for React)
 - Modern browser (Chrome, Edge, Firefox)
