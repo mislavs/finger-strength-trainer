@@ -1,3 +1,4 @@
+using TindeqTrainer.Api.Endpoints;
 using TindeqTrainer.Api.Hubs;
 using TindeqTrainer.Api.Middleware;
 using TindeqTrainer.Application;
@@ -13,6 +14,13 @@ builder.Services
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
 var app = builder.Build();
 
@@ -20,6 +28,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors("Frontend");
 }
 
 using (var scope = app.Services.CreateScope())
@@ -32,6 +41,7 @@ app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.UseHttpsRedirection();
 
 app.MapHub<TrainingHub>("/hubs/training");
+app.MapProtocolEndpoints();
 
 app.MapGet("/", () => Results.Ok("TindeqTrainer API is running."));
 

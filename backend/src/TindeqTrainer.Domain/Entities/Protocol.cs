@@ -46,6 +46,77 @@ public class Protocol
         bool isDefault = false,
         Guid? id = null)
     {
+        var normalizedName = ValidateAndNormalize(
+            name,
+            maxWeightKg,
+            weightPercentage,
+            setsPerHand,
+            workSeconds,
+            restSeconds,
+            handSwitchSeconds,
+            countdownSeconds);
+
+        return new Protocol
+        {
+            Id = id ?? Guid.NewGuid(),
+            Name = normalizedName,
+            MaxWeightKg = maxWeightKg,
+            WeightPercentage = weightPercentage,
+            SetsPerHand = setsPerHand,
+            WorkSeconds = workSeconds,
+            RestSeconds = restSeconds,
+            HandSwitchSeconds = handSwitchSeconds,
+            CountdownSeconds = countdownSeconds,
+            AudioCues = audioCues,
+            CountdownBeeps = countdownBeeps,
+            IsDefault = isDefault
+        };
+    }
+
+    public void Update(
+        string name,
+        double maxWeightKg,
+        double weightPercentage,
+        int setsPerHand,
+        double workSeconds,
+        double restSeconds,
+        double handSwitchSeconds,
+        double countdownSeconds,
+        bool audioCues,
+        bool countdownBeeps)
+    {
+        var normalizedName = ValidateAndNormalize(
+            name,
+            maxWeightKg,
+            weightPercentage,
+            setsPerHand,
+            workSeconds,
+            restSeconds,
+            handSwitchSeconds,
+            countdownSeconds);
+
+        Name = normalizedName;
+        MaxWeightKg = maxWeightKg;
+        WeightPercentage = weightPercentage;
+        SetsPerHand = setsPerHand;
+        WorkSeconds = workSeconds;
+        RestSeconds = restSeconds;
+        HandSwitchSeconds = handSwitchSeconds;
+        CountdownSeconds = countdownSeconds;
+        AudioCues = audioCues;
+        CountdownBeeps = countdownBeeps;
+    }
+
+    private static string ValidateAndNormalize(
+        string name,
+        double maxWeightKg,
+        double weightPercentage,
+        int setsPerHand,
+        double workSeconds,
+        double restSeconds,
+        double handSwitchSeconds,
+        double countdownSeconds)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         if (weightPercentage is < 0 or > 100)
@@ -63,20 +134,6 @@ public class Protocol
             throw new ArgumentOutOfRangeException(nameof(maxWeightKg), "Numeric protocol settings must be non-negative and work seconds must be greater than zero.");
         }
 
-        return new Protocol
-        {
-            Id = id ?? Guid.NewGuid(),
-            Name = name.Trim(),
-            MaxWeightKg = maxWeightKg,
-            WeightPercentage = weightPercentage,
-            SetsPerHand = setsPerHand,
-            WorkSeconds = workSeconds,
-            RestSeconds = restSeconds,
-            HandSwitchSeconds = handSwitchSeconds,
-            CountdownSeconds = countdownSeconds,
-            AudioCues = audioCues,
-            CountdownBeeps = countdownBeeps,
-            IsDefault = isDefault
-        };
+        return name.Trim();
     }
 }
