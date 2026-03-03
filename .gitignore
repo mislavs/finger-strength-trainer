@@ -447,6 +447,7 @@ packages/
 # Node / frontend
 node_modules/
 dist/
+frontend/openapi.json
 coverage/
 npm-debug.log*
 yarn-debug.log*

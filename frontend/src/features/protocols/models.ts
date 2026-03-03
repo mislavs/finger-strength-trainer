@@ -1,30 +1,19 @@
-export interface ProtocolSummary {
-  id: string
-  name: string
-  weightPercentage: number
-  setsPerHand: number
-  workSeconds: number
-  isDefault: boolean
+import type {
+  CreateProtocolRequest,
+  ProtocolDto,
+  ProtocolSummaryDto,
+  UpdateProtocolRequest,
+} from "@/lib/api/schemas"
+
+type RequiredNonNullable<T> = {
+  [K in keyof T]-?: NonNullable<T[K]>
 }
 
-export interface ProtocolInput {
-  name: string
-  maxWeightKg: number
-  weightPercentage: number
-  setsPerHand: number
-  workSeconds: number
-  restSeconds: number
-  handSwitchSeconds: number
-  countdownSeconds: number
-  audioCues: boolean
-  countdownBeeps: boolean
-}
+type ProtocolRequest = CreateProtocolRequest & UpdateProtocolRequest
 
-export interface Protocol extends ProtocolInput {
-  id: string
-  isDefault: boolean
-  targetWeightKg: number
-}
+export type ProtocolSummary = RequiredNonNullable<ProtocolSummaryDto>
+export type ProtocolInput = RequiredNonNullable<ProtocolRequest>
+export type Protocol = RequiredNonNullable<ProtocolDto>
 
 export const protocolFieldNames: Array<keyof ProtocolInput> = [
   "name",
