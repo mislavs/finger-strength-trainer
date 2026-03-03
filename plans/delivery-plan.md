@@ -78,7 +78,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 2: Protocol Management (Full-Stack Vertical Slice)
+## Step 2: Protocol Management (Full-Stack Vertical Slice) (DONE)
 
 - **Goal:** Deliver end-to-end protocol CRUD -- the first feature users can interact with in the browser.
 - **Scope:**
