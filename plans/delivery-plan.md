@@ -58,7 +58,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 1: Solution Foundation
+## Step 1: Solution Foundation (DONE)
 
 - **Goal:** Scaffold the Clean Architecture solution with domain models, EF Core + SQLite persistence, and a buildable/testable baseline.
 - **Scope:**
