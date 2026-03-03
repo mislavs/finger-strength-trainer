@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TindeqTrainer.Api/TindeqTrainer.Api.csproj" />
+    <Project Path="src/TindeqTrainer.Application/TindeqTrainer.Application.csproj" />
+    <Project Path="src/TindeqTrainer.Domain/TindeqTrainer.Domain.csproj" />
+    <Project Path="src/TindeqTrainer.Infrastructure/TindeqTrainer.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TindeqTrainer.Application.Tests/TindeqTrainer.Application.Tests.csproj" />
+    <Project Path="tests/TindeqTrainer.Architecture.Tests/TindeqTrainer.Architecture.Tests.csproj" />
+    <Project Path="tests/TindeqTrainer.Domain.Tests/TindeqTrainer.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
