@@ -5,6 +5,10 @@
     <Project Path="src/TindeqTrainer.Domain/TindeqTrainer.Domain.csproj" />
     <Project Path="src/TindeqTrainer.Infrastructure/TindeqTrainer.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/aspire/">
+    <Project Path="src/TindeqTrainer.AppHost/TindeqTrainer.AppHost.csproj" />
+    <Project Path="src/TindeqTrainer.ServiceDefaults/TindeqTrainer.ServiceDefaults.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TindeqTrainer.Application.Tests/TindeqTrainer.Application.Tests.csproj" />
     <Project Path="tests/TindeqTrainer.Architecture.Tests/TindeqTrainer.Architecture.Tests.csproj" />

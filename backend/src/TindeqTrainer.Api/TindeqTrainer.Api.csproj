@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TindeqTrainer.Application\TindeqTrainer.Application.csproj" />
+    <ProjectReference Include="..\TindeqTrainer.ServiceDefaults\TindeqTrainer.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

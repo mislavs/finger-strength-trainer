@@ -7,6 +7,8 @@ using TindeqTrainer.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration);
@@ -44,6 +46,7 @@ app.MapHub<TrainingHub>("/hubs/training");
 app.MapProtocolEndpoints();
 
 app.MapGet("/", () => Results.Ok("TindeqTrainer API is running."));
+app.MapDefaultEndpoints();
 
 app.Run();
 
