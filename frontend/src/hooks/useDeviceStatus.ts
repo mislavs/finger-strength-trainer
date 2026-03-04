@@ -15,11 +15,14 @@ interface UseDeviceStatusResult {
   status: DeviceStatus
   connectionState: HubConnectionState
   isBusy: boolean
+  isConnecting: boolean
   error: string | null
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   tare: () => Promise<void>
 }
+
+type DeviceCommand = "Connect" | "Disconnect" | "Tare"
 
 const emptyStatus: DeviceStatus = {
   isConnected: false,
@@ -62,8 +65,10 @@ async function ensureConnected(connection: HubConnection): Promise<void> {
 export function useDeviceStatus(): UseDeviceStatusResult {
   const { connection, connectionState } = useSignalR()
   const [status, setStatus] = useState<DeviceStatus>(emptyStatus)
-  const [isBusy, setIsBusy] = useState(false)
+  const [activeCommand, setActiveCommand] = useState<DeviceCommand | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const isBusy = activeCommand !== null
+  const isConnecting = activeCommand === "Connect"
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -103,8 +108,8 @@ export function useDeviceStatus(): UseDeviceStatusResult {
   }, [connection])
 
   const runCommand = useCallback(
-    async (command: "Connect" | "Disconnect" | "Tare") => {
-      setIsBusy(true)
+    async (command: DeviceCommand) => {
+      setActiveCommand(command)
       setError(null)
 
       try {
@@ -113,7 +118,7 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       } catch (commandError) {
         setError(toErrorMessage(commandError))
       } finally {
-        setIsBusy(false)
+        setActiveCommand(null)
       }
     },
     [connection],
@@ -136,11 +141,12 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       status,
       connectionState,
       isBusy,
+      isConnecting,
       error,
       connect,
       disconnect,
       tare,
     }),
-    [connect, connectionState, disconnect, error, isBusy, status, tare],
+    [connect, connectionState, disconnect, error, isBusy, isConnecting, status, tare],
   )
 }
