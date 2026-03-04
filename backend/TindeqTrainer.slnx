@@ -13,5 +13,6 @@
     <Project Path="tests/TindeqTrainer.Application.Tests/TindeqTrainer.Application.Tests.csproj" />
     <Project Path="tests/TindeqTrainer.Architecture.Tests/TindeqTrainer.Architecture.Tests.csproj" />
     <Project Path="tests/TindeqTrainer.Domain.Tests/TindeqTrainer.Domain.Tests.csproj" />
+    <Project Path="tests/TindeqTrainer.Infrastructure.Tests/TindeqTrainer.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

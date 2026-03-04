@@ -43,6 +43,7 @@ app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.UseHttpsRedirection();
 
 app.MapHub<TrainingHub>("/hubs/training");
+app.MapDeviceEndpoints();
 app.MapProtocolEndpoints();
 
 app.MapGet("/", () => Results.Ok("TindeqTrainer API is running."));
