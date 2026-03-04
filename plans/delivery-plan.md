@@ -104,7 +104,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 3: BLE Device Connection
+## Step 3: BLE Device Connection (DONE)
 
 - **Goal:** Connect to a Tindeq Progressor via Bluetooth LE, front-loading hardware integration risk.
 - **Scope:**
@@ -124,6 +124,13 @@ frontend/                              React SPA (Vite + TypeScript)
   - Unit tests for `MockProgressorService` behavior
 - **Verification:** `dotnet build`, `dotnet test`; launch app with mock BLE, verify connection bar shows mock device status; optionally test with real Progressor
 - **Exit Criteria:** App can connect to a Progressor (or mock), send tare command, display device status in UI
+- **Implementation Summary:**
+  - Added real and mock BLE implementations in `Infrastructure/Bluetooth` (`ProgressorService`, `MockProgressorService`) plus TLV parsing (`NotificationParser`)
+  - Added BLE DI registration with configuration switch (`UseMockBle`)
+  - Added `DeviceEndpoints` (`GET /api/device/status`) and SignalR `Connect` / `Disconnect` / `Tare` hub methods
+  - Added frontend SignalR client hooks and `ConnectionBar` integration in the layout
+  - Added `TindeqTrainer.Infrastructure.Tests` with unit coverage for notification parsing and mock BLE behavior
+  - `IProgressorService` and `DeviceStatusDto` were placed in `TindeqTrainer.Domain/Services` to avoid project reference cycles
 
 ---
 
