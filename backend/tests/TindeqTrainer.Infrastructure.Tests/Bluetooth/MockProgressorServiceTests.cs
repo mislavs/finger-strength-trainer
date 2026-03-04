@@ -6,7 +6,7 @@ namespace TindeqTrainer.Infrastructure.Tests.Bluetooth;
 public class MockProgressorServiceTests
 {
     [Fact]
-    public async Task ConnectAndDisconnect_ShouldRaiseConnectionStatusEvents()
+    public async Task ConnectAndDisconnect_WhenCalled_RaisesConnectionStatusEvents()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var service = new MockProgressorService();
@@ -20,7 +20,7 @@ public class MockProgressorServiceTests
     }
 
     [Fact]
-    public async Task StartMeasurement_ShouldEmitSampleBatches()
+    public async Task StartMeasurement_WhenConnected_EmitsSampleBatches()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var service = new MockProgressorService();
@@ -43,7 +43,7 @@ public class MockProgressorServiceTests
     }
 
     [Fact]
-    public async Task StopMeasurement_ShouldStopFurtherSampleEmission()
+    public async Task StopMeasurement_WhenCalled_StopsFurtherSampleEmission()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var service = new MockProgressorService();

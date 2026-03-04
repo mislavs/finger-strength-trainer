@@ -8,7 +8,7 @@ namespace TindeqTrainer.Infrastructure.Tests.Bluetooth;
 public class NotificationParserTests
 {
     [Fact]
-    public void ParseTlv_ShouldReturnPayload_WhenNotificationIsValid()
+    public void ParseTlv_WhenNotificationIsValid_ReturnsPayload()
     {
         var payload = "2.3.1"u8.ToArray();
         var notification = new byte[2 + payload.Length];
@@ -23,7 +23,7 @@ public class NotificationParserTests
     }
 
     [Fact]
-    public void ParseTlv_ShouldReturnEmptyPayload_WhenFrameIsTruncated()
+    public void ParseTlv_WhenFrameIsTruncated_ReturnsEmptyPayload()
     {
         byte[] notification = [0x01, 0x08, 0x01, 0x02, 0x03];
 
@@ -34,7 +34,7 @@ public class NotificationParserTests
     }
 
     [Fact]
-    public void ParseWeightSamples_ShouldParseSingleSample()
+    public void ParseWeightSamples_WhenSingleSample_ParsesCorrectly()
     {
         var payload = new byte[8];
         var weightBits = BitConverter.SingleToInt32Bits(12.34f);
@@ -49,7 +49,7 @@ public class NotificationParserTests
     }
 
     [Fact]
-    public void ParseWeightSamples_ShouldIgnoreTrailingPartialSample()
+    public void ParseWeightSamples_WhenPayloadHasTrailingBytes_IgnoresPartialSample()
     {
         var payload = new byte[11];
         var weightBits = BitConverter.SingleToInt32Bits(6.5f);
@@ -67,7 +67,7 @@ public class NotificationParserTests
     }
 
     [Fact]
-    public void ParseBatteryVoltage_ShouldConvertMillivoltsToVolts()
+    public void ParseBatteryVoltage_WhenValidPayload_ConvertsMillivoltsToVolts()
     {
         var payload = new byte[4];
         BinaryPrimitives.WriteUInt32LittleEndian(payload, 3_910u);
@@ -78,7 +78,7 @@ public class NotificationParserTests
     }
 
     [Fact]
-    public void ParseFirmwareVersion_ShouldDecodeUtf8Payload()
+    public void ParseFirmwareVersion_WhenValidPayload_DecodesUtf8String()
     {
         var payload = "2.6.0-beta"u8.ToArray();
 

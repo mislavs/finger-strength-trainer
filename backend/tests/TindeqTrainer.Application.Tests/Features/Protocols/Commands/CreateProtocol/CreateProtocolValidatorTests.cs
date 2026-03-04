@@ -1,4 +1,5 @@
 using FluentAssertions;
+using FluentValidation.TestHelper;
 using TindeqTrainer.Application.Features.Protocols.Commands.CreateProtocol;
 
 namespace TindeqTrainer.Application.Tests.Features.Protocols.Commands.CreateProtocol;
@@ -14,10 +15,10 @@ public class CreateProtocolValidatorTests
         var command = CreateValidCommand();
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
-        result.IsValid.Should().BeTrue();
+        result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
@@ -27,10 +28,10 @@ public class CreateProtocolValidatorTests
         var command = CreateValidCommand() with { Name = string.Empty };
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(CreateProtocolCommand.Name));
+        result.ShouldHaveValidationErrorFor(x => x.Name);
     }
 
     [Fact]
@@ -40,10 +41,10 @@ public class CreateProtocolValidatorTests
         var command = CreateValidCommand() with { Name = new string('a', 151) };
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(CreateProtocolCommand.Name));
+        result.ShouldHaveValidationErrorFor(x => x.Name);
     }
 
     [Theory]
@@ -55,10 +56,10 @@ public class CreateProtocolValidatorTests
         var command = CreateValidCommand() with { WeightPercentage = value };
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(CreateProtocolCommand.WeightPercentage));
+        result.ShouldHaveValidationErrorFor(x => x.WeightPercentage);
     }
 
     [Theory]
@@ -70,10 +71,10 @@ public class CreateProtocolValidatorTests
         var command = CreateValidCommand() with { SetsPerHand = value };
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(CreateProtocolCommand.SetsPerHand));
+        result.ShouldHaveValidationErrorFor(x => x.SetsPerHand);
     }
 
     [Theory]
@@ -85,10 +86,10 @@ public class CreateProtocolValidatorTests
         var command = CreateValidCommand() with { WorkSeconds = value };
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
-        result.Errors.Should().Contain(x => x.PropertyName == nameof(CreateProtocolCommand.WorkSeconds));
+        result.ShouldHaveValidationErrorFor(x => x.WorkSeconds);
     }
 
     [Theory]
@@ -109,7 +110,7 @@ public class CreateProtocolValidatorTests
         };
 
         // Act
-        var result = _sut.Validate(command);
+        var result = _sut.TestValidate(command);
 
         // Assert
         result.Errors.Should().Contain(x => x.PropertyName == fieldName);
