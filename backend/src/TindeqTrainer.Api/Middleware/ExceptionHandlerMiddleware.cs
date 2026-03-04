@@ -5,7 +5,9 @@ using TindeqTrainer.Domain.Exceptions;
 
 namespace TindeqTrainer.Api.Middleware;
 
-public class ExceptionHandlerMiddleware(RequestDelegate _next)
+public class ExceptionHandlerMiddleware(
+    RequestDelegate _next,
+    ILogger<ExceptionHandlerMiddleware> _logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -15,14 +17,30 @@ public class ExceptionHandlerMiddleware(RequestDelegate _next)
         }
         catch (ValidationException ex)
         {
+            _logger.LogInformation(
+                ex,
+                "Validation failed for {RequestMethod} {RequestPath}",
+                context.Request.Method,
+                context.Request.Path);
             await WriteValidationResponse(context, ex);
         }
         catch (NotFoundException ex)
         {
+            _logger.LogWarning(
+                ex,
+                "Resource not found for {RequestMethod} {RequestPath}: {Message}",
+                context.Request.Method,
+                context.Request.Path,
+                ex.Message);
             await WriteErrorResponse(context, HttpStatusCode.NotFound, ex.Message);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(
+                ex,
+                "Unhandled exception for {RequestMethod} {RequestPath}",
+                context.Request.Method,
+                context.Request.Path);
             await WriteErrorResponse(
                 context,
                 HttpStatusCode.InternalServerError,

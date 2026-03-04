@@ -23,15 +23,11 @@ export function useSignalR(): SignalRConnection {
       setConnectionState(connection.state)
     }
 
-    connection.onreconnecting(() => {
-      syncState()
-    })
-    connection.onreconnected(() => {
-      syncState()
-    })
-    connection.onclose(() => {
-      syncState()
-    })
+    connection.onreconnecting(syncState)
+    connection.onreconnected(syncState)
+    connection.onclose(syncState)
+
+    connection.start().then(syncState, syncState)
 
     return () => {
       void connection.stop()

@@ -3,7 +3,9 @@ using TindeqTrainer.Domain.Services;
 
 namespace TindeqTrainer.Api.Hubs;
 
-public class TrainingHub(IProgressorService _progressorService) : Hub
+public class TrainingHub(
+    IProgressorService _progressorService,
+    ILogger<TrainingHub> _logger) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -11,24 +13,50 @@ public class TrainingHub(IProgressorService _progressorService) : Hub
         await base.OnConnectedAsync();
     }
 
-    public async Task Connect(CancellationToken cancellationToken = default)
+    public async Task Connect()
     {
-        await _progressorService.ConnectAsync(cancellationToken);
-        await _progressorService.GetBatteryVoltageAsync(cancellationToken);
-        await _progressorService.GetFirmwareVersionAsync(cancellationToken);
+        var ct = Context.ConnectionAborted;
 
-        await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), cancellationToken);
+        try
+        {
+            await _progressorService.ConnectAsync(ct);
+            await _progressorService.GetBatteryVoltageAsync(ct);
+            await _progressorService.GetFirmwareVersionAsync(ct);
+
+            await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(Connect));
+            throw;
+        }
     }
 
-    public async Task Disconnect(CancellationToken cancellationToken = default)
+    public async Task Disconnect()
     {
-        await _progressorService.DisconnectAsync();
-        await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), cancellationToken);
+        try
+        {
+            await _progressorService.DisconnectAsync();
+            await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), Context.ConnectionAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(Disconnect));
+            throw;
+        }
     }
 
-    public Task Tare(CancellationToken cancellationToken = default)
+    public async Task Tare()
     {
-        return _progressorService.TareAsync(cancellationToken);
+        try
+        {
+            await _progressorService.TareAsync(Context.ConnectionAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(Tare));
+            throw;
+        }
     }
 
     private DeviceStatusDto BuildDeviceStatus()
