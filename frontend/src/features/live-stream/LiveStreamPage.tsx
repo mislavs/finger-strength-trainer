@@ -1,8 +1,8 @@
 import { useMemo } from "react"
 import { toast } from "sonner"
 
+import { ForceChart } from "@/components/ForceChart"
 import { useDeviceStatus } from "@/hooks/useDeviceStatus"
-import { ForceChart } from "@/features/live-stream/ForceChart"
 import { useLiveStream } from "@/features/live-stream/hooks"
 import { LiveStats } from "@/features/live-stream/LiveStats"
 import { SaveDiscardDialog } from "@/features/live-stream/SaveDiscardDialog"

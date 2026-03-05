@@ -1,8 +1,3 @@
-export interface ForceSamplePoint {
-  weightKg: number
-  timestampSeconds: number
-}
-
 export interface LiveStreamStoppedStats {
   peakForceKg: number
   avgForceKg: number

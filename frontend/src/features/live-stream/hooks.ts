@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import type { ForceSamplePoint } from "@/components/ForceChart"
 import { useSignalR } from "@/hooks/useSignalR"
 import { ensureConnected } from "@/lib/signalr/ensureConnected"
 import { getSignalRConnectionErrorMessage, toHubErrorMessage } from "@/lib/signalr/hubErrorMessage"
 
 import type {
-  ForceSamplePoint,
   LiveStatsSnapshot,
   LiveStreamState,
   LiveStreamStoppedStats,

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef } from "react"
 import uPlot from "uplot"
 
-import type { ForceSamplePoint } from "@/features/live-stream/models"
-
 import "uplot/dist/uPlot.min.css"
+
+export interface ForceSamplePoint {
+  weightKg: number
+  timestampSeconds: number
+}
 
 interface ForceChartProps {
   samples: ForceSamplePoint[]
@@ -12,6 +15,32 @@ interface ForceChartProps {
 }
 
 type PlotData = [number[], number[]]
+type ChartPalette = {
+  axisText: string
+  axisLine: string
+  gridLine: string
+  seriesLine: string
+}
+
+function getChartPalette(): ChartPalette {
+  const isDark = document.documentElement.classList.contains("dark")
+
+  if (isDark) {
+    return {
+      axisText: "#cbd5e1",
+      axisLine: "#64748b",
+      gridLine: "rgba(148, 163, 184, 0.25)",
+      seriesLine: "#60a5fa",
+    }
+  }
+
+  return {
+    axisText: "#334155",
+    axisLine: "#94a3b8",
+    gridLine: "rgba(100, 116, 139, 0.25)",
+    seriesLine: "#2563eb",
+  }
+}
 
 function buildPlotData(samples: ForceSamplePoint[], windowSeconds: number): PlotData {
   if (samples.length === 0) {
@@ -40,6 +69,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceC
 
     const container = containerRef.current
     const initialWidth = Math.max(320, Math.floor(container.clientWidth))
+    const palette = getChartPalette()
     const options: uPlot.Options = {
       width: initialWidth,
       height,
@@ -49,10 +79,16 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceC
       axes: [
         {
           label: "Time (s)",
+          stroke: palette.axisText,
+          grid: { stroke: palette.gridLine, width: 1 },
+          ticks: { stroke: palette.axisLine, width: 1, size: 6 },
           values: (_plot, ticks) => ticks.map((tick) => `${Number(tick).toFixed(1)}s`),
         },
         {
           label: "Force (kg)",
+          stroke: palette.axisText,
+          grid: { stroke: palette.gridLine, width: 1 },
+          ticks: { stroke: palette.axisLine, width: 1, size: 6 },
           values: (_plot, ticks) => ticks.map((tick) => Number(tick).toFixed(1)),
         },
       ],
@@ -60,7 +96,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceC
         {},
         {
           label: "Force",
-          stroke: "#2563eb",
+          stroke: palette.seriesLine,
           width: 2,
         },
       ],

@@ -5,6 +5,7 @@ export const appRoutes = {
   liveStream: "/live-stream",
   repeater: "/repeater",
   history: "/history",
+  historyDetail: "/history/:id",
 } as const
 
 export const navigationItems = [
