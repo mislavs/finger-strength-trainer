@@ -134,7 +134,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 4: Live Stream Feature
+## Step 4: Live Stream Feature (DONE)
 
 - **Goal:** Deliver the first real-time measurement feature -- free-form force monitoring with chart visualization and session persistence.
 - **Scope:**
