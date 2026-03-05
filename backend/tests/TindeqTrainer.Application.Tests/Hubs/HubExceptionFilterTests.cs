@@ -23,7 +23,7 @@ public sealed class HubExceptionFilterTests
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-        var invocationContext = CreateInvocationContext(cancellationToken);
+        var invocationContext = CreateInvocationContext(cancellationToken: cancellationToken);
         var exception = new TimeoutException("No Tindeq Progressor device found within the scan timeout.");
 
         // Act
@@ -40,7 +40,7 @@ public sealed class HubExceptionFilterTests
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-        var invocationContext = CreateInvocationContext(cancellationToken);
+        var invocationContext = CreateInvocationContext(cancellationToken: cancellationToken);
         var exception = new InvalidOperationException("Progressor is not connected.");
 
         // Act
@@ -60,7 +60,7 @@ public sealed class HubExceptionFilterTests
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-        var invocationContext = CreateInvocationContext(cancellationToken);
+        var invocationContext = CreateInvocationContext(cancellationToken: cancellationToken);
         var exception = new InvalidOperationException(message);
 
         // Act
@@ -110,7 +110,7 @@ public sealed class HubExceptionFilterTests
         // Arrange
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cts.Cancel();
-        var invocationContext = CreateInvocationContext(cts.Token);
+        var invocationContext = CreateInvocationContext(cancellationToken: cts.Token);
         var exception = new OperationCanceledException(cts.Token);
 
         // Act
@@ -126,7 +126,7 @@ public sealed class HubExceptionFilterTests
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-        var invocationContext = CreateInvocationContext(cancellationToken);
+        var invocationContext = CreateInvocationContext(cancellationToken: cancellationToken);
 
         // Act
         var result = await _sut.InvokeMethodAsync(

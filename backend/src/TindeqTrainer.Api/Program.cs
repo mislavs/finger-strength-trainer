@@ -72,6 +72,7 @@ try
     app.MapHub<TrainingHub>("/hubs/training");
     app.MapDeviceEndpoints();
     app.MapProtocolEndpoints();
+    app.MapSessionEndpoints();
 
     app.MapGet("/", () => Results.Ok("TindeqTrainer API is running."));
     app.MapDefaultEndpoints();
