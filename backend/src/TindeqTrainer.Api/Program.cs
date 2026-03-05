@@ -2,7 +2,9 @@ using Serilog;
 using TindeqTrainer.Api.Endpoints;
 using TindeqTrainer.Api.Hubs;
 using TindeqTrainer.Api.Middleware;
+using TindeqTrainer.Api.Services;
 using TindeqTrainer.Application;
+using TindeqTrainer.Application.Services;
 using TindeqTrainer.Infrastructure;
 using TindeqTrainer.Infrastructure.Persistence;
 
@@ -34,6 +36,7 @@ try
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+    builder.Services.AddSingleton<ILiveStreamNotifier, SignalRLiveStreamNotifier>();
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("Frontend", policy =>

@@ -1,0 +1,185 @@
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { HubConnectionState } from "@microsoft/signalr"
+
+import { useSignalR } from "@/hooks/useSignalR"
+import { ensureConnected } from "@/lib/signalr/ensureConnected"
+import type {
+  ForceSamplePoint,
+  LiveStatsSnapshot,
+  LiveStreamState,
+  LiveStreamStoppedStats,
+} from "@/features/live-stream/models"
+
+interface UseLiveStreamResult {
+  samples: ForceSamplePoint[]
+  stats: LiveStatsSnapshot
+  stoppedStats: LiveStreamStoppedStats | null
+  streamState: LiveStreamState
+  connectionState: HubConnectionState
+  isBusy: boolean
+  error: string | null
+  start: () => Promise<void>
+  stop: () => Promise<void>
+  save: () => Promise<string | null>
+  discard: () => Promise<void>
+}
+
+type LiveStreamCommand = "StartLiveStream" | "StopLiveStream" | "SaveLiveStream" | "DiscardLiveStream"
+
+const maxRenderedSamples = 600
+const initialStats: LiveStatsSnapshot = {
+  currentForceKg: 0,
+  peakForceKg: 0,
+  durationSeconds: 0,
+  avgForceKg: null,
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "An unexpected error occurred."
+}
+
+function appendRollingSamples(current: ForceSamplePoint[], incoming: ForceSamplePoint[]): ForceSamplePoint[] {
+  const merged = [...current, ...incoming]
+  if (merged.length <= maxRenderedSamples) {
+    return merged
+  }
+
+  return merged.slice(merged.length - maxRenderedSamples)
+}
+
+export function useLiveStream(): UseLiveStreamResult {
+  const { connection, connectionState } = useSignalR()
+  const [samples, setSamples] = useState<ForceSamplePoint[]>([])
+  const [stats, setStats] = useState<LiveStatsSnapshot>(initialStats)
+  const [stoppedStats, setStoppedStats] = useState<LiveStreamStoppedStats | null>(null)
+  const [streamState, setStreamState] = useState<LiveStreamState>("idle")
+  const [activeCommand, setActiveCommand] = useState<LiveStreamCommand | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const onForceSamples = (incomingSamples: ForceSamplePoint[]) => {
+      if (!Array.isArray(incomingSamples) || incomingSamples.length === 0) {
+        return
+      }
+
+      setSamples((currentSamples) => appendRollingSamples(currentSamples, incomingSamples))
+      setStats((currentStats) => {
+        const latest = incomingSamples[incomingSamples.length - 1]
+        const incomingPeak = incomingSamples.reduce((peak, sample) => Math.max(peak, sample.weightKg), 0)
+
+        return {
+          currentForceKg: latest.weightKg,
+          peakForceKg: Math.max(currentStats.peakForceKg, incomingPeak),
+          durationSeconds: Math.max(currentStats.durationSeconds, latest.timestampSeconds),
+          avgForceKg: currentStats.avgForceKg,
+        }
+      })
+    }
+
+    const onLiveStreamStopped = (nextStats: LiveStreamStoppedStats) => {
+      setStoppedStats(nextStats)
+      setStats((currentStats) => ({
+        currentForceKg: currentStats.currentForceKg,
+        peakForceKg: nextStats.peakForceKg,
+        durationSeconds: nextStats.durationSeconds,
+        avgForceKg: nextStats.avgForceKg,
+      }))
+      setStreamState("stopped")
+      setError(null)
+    }
+
+    connection.on("ForceSamples", onForceSamples)
+    connection.on("LiveStreamStopped", onLiveStreamStopped)
+
+    return () => {
+      connection.off("ForceSamples", onForceSamples)
+      connection.off("LiveStreamStopped", onLiveStreamStopped)
+    }
+  }, [connection])
+
+  const runCommand = useCallback(
+    async <TResult,>(command: LiveStreamCommand): Promise<TResult | null> => {
+      setActiveCommand(command)
+      setError(null)
+
+      try {
+        await ensureConnected(connection)
+        return await connection.invoke<TResult>(command)
+      } catch (commandError) {
+        setError(toErrorMessage(commandError))
+        return null
+      } finally {
+        setActiveCommand(null)
+      }
+    },
+    [connection],
+  )
+
+  const start = useCallback(async () => {
+    setSamples([])
+    setStats(initialStats)
+    setStoppedStats(null)
+
+    const result = await runCommand<void>("StartLiveStream")
+    if (result === null) {
+      return
+    }
+
+    setStreamState("streaming")
+  }, [runCommand])
+
+  const stop = useCallback(async () => {
+    const result = await runCommand<void>("StopLiveStream")
+    if (result === null) {
+      return
+    }
+
+    setStreamState("stopped")
+  }, [runCommand])
+
+  const save = useCallback(async (): Promise<string | null> => {
+    const sessionId = await runCommand<string>("SaveLiveStream")
+    if (!sessionId) {
+      return null
+    }
+
+    setStreamState("idle")
+    setSamples([])
+    setStats(initialStats)
+    setStoppedStats(null)
+    return sessionId
+  }, [runCommand])
+
+  const discard = useCallback(async () => {
+    const result = await runCommand<void>("DiscardLiveStream")
+    if (result === null) {
+      return
+    }
+
+    setStreamState("idle")
+    setSamples([])
+    setStats(initialStats)
+    setStoppedStats(null)
+  }, [runCommand])
+
+  return useMemo(
+    () => ({
+      samples,
+      stats,
+      stoppedStats,
+      streamState,
+      connectionState,
+      isBusy: activeCommand !== null,
+      error,
+      start,
+      stop,
+      save,
+      discard,
+    }),
+    [activeCommand, connectionState, discard, error, samples, save, start, stats, stoppedStats, stop, streamState],
+  )
+}

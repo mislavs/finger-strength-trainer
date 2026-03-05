@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { createContext, createElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr"
 
 interface SignalRConnection {
@@ -6,7 +6,9 @@ interface SignalRConnection {
   connectionState: HubConnectionState
 }
 
-export function useSignalR(): SignalRConnection {
+const SignalRContext = createContext<SignalRConnection | null>(null)
+
+export function SignalRProvider({ children }: { children: ReactNode }) {
   const connection = useMemo(
     () =>
       new HubConnectionBuilder()
@@ -16,6 +18,7 @@ export function useSignalR(): SignalRConnection {
         .build(),
     [],
   )
+
   const [connectionState, setConnectionState] = useState<HubConnectionState>(connection.state)
 
   useEffect(() => {
@@ -34,5 +37,23 @@ export function useSignalR(): SignalRConnection {
     }
   }, [connection])
 
-  return { connection, connectionState }
+  const value = useMemo(
+    () => ({
+      connection,
+      connectionState,
+    }),
+    [connection, connectionState],
+  )
+
+  return createElement(SignalRContext.Provider, { value }, children)
+}
+
+export function useSignalR(): SignalRConnection {
+  const context = useContext(SignalRContext)
+
+  if (!context) {
+    throw new Error("useSignalR must be used within a SignalRProvider.")
+  }
+
+  return context
 }

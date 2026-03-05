@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { HubConnection, HubConnectionState } from "@microsoft/signalr"
+import { HubConnectionState } from "@microsoft/signalr"
 
 import { ApiClientError, apiRequest } from "@/lib/api-client"
+import { ensureConnected } from "@/lib/signalr/ensureConnected"
 import { useSignalR } from "@/hooks/useSignalR"
 
 interface DeviceStatus {
@@ -54,12 +55,6 @@ function toErrorMessage(error: unknown): string {
   }
 
   return "An unexpected error occurred."
-}
-
-async function ensureConnected(connection: HubConnection): Promise<void> {
-  if (connection.state === HubConnectionState.Disconnected) {
-    await connection.start()
-  }
 }
 
 export function useDeviceStatus(): UseDeviceStatusResult {

@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.SignalR;
+using TindeqTrainer.Application.Services;
 using TindeqTrainer.Domain.Services;
 
 namespace TindeqTrainer.Api.Hubs;
 
 public class TrainingHub(
     IProgressorService _progressorService,
+    LiveStreamService _liveStreamService,
     ILogger<TrainingHub> _logger) : Hub
 {
     public override async Task OnConnectedAsync()
@@ -55,6 +57,59 @@ public class TrainingHub(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Hub method {Method} failed", nameof(Tare));
+            throw;
+        }
+    }
+
+    public async Task StartLiveStream()
+    {
+        try
+        {
+            await _liveStreamService.StartAsync(Context.ConnectionAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(StartLiveStream));
+            throw;
+        }
+    }
+
+    public async Task StopLiveStream()
+    {
+        try
+        {
+            await _liveStreamService.StopAsync(Context.ConnectionAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(StopLiveStream));
+            throw;
+        }
+    }
+
+    public async Task<Guid> SaveLiveStream()
+    {
+        try
+        {
+            return await _liveStreamService.SaveAsync(Context.ConnectionAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(SaveLiveStream));
+            throw;
+        }
+    }
+
+    public Task DiscardLiveStream()
+    {
+        try
+        {
+            _liveStreamService.Discard();
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Hub method {Method} failed", nameof(DiscardLiveStream));
             throw;
         }
     }

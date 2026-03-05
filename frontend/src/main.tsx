@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes"
 import { BrowserRouter } from "react-router-dom"
 
 import { Toaster } from "@/components/ui/sonner"
+import { SignalRProvider } from "@/hooks/useSignalR"
 import App from "@/App"
 import "@/index.css"
 
@@ -14,9 +15,11 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <SignalRProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </SignalRProvider>
         <Toaster richColors />
       </QueryClientProvider>
     </ThemeProvider>
