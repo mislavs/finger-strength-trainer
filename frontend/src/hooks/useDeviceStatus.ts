@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { HubConnectionState } from "@microsoft/signalr"
 
 import { ApiClientError, apiRequest } from "@/lib/api-client"
 import { ensureConnected } from "@/lib/signalr/ensureConnected"
@@ -14,7 +13,6 @@ interface DeviceStatus {
 
 interface UseDeviceStatusResult {
   status: DeviceStatus
-  connectionState: HubConnectionState
   isBusy: boolean
   isConnecting: boolean
   error: string | null
@@ -58,7 +56,7 @@ function toErrorMessage(error: unknown): string {
 }
 
 export function useDeviceStatus(): UseDeviceStatusResult {
-  const { connection, connectionState } = useSignalR()
+  const { connection } = useSignalR()
   const [status, setStatus] = useState<DeviceStatus>(emptyStatus)
   const [activeCommand, setActiveCommand] = useState<DeviceCommand | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -134,7 +132,6 @@ export function useDeviceStatus(): UseDeviceStatusResult {
   return useMemo(
     () => ({
       status,
-      connectionState,
       isBusy,
       isConnecting,
       error,
@@ -142,6 +139,6 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       disconnect,
       tare,
     }),
-    [connect, connectionState, disconnect, error, isBusy, isConnecting, status, tare],
+    [connect, disconnect, error, isBusy, isConnecting, status, tare],
   )
 }

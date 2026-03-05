@@ -1,9 +1,8 @@
-import { createContext, createElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr"
+import { createContext, createElement, useContext, useEffect, useMemo, type ReactNode } from "react"
+import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr"
 
 interface SignalRConnection {
   connection: HubConnection
-  connectionState: HubConnectionState
 }
 
 const SignalRContext = createContext<SignalRConnection | null>(null)
@@ -19,18 +18,8 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const [connectionState, setConnectionState] = useState<HubConnectionState>(connection.state)
-
   useEffect(() => {
-    const syncState = () => {
-      setConnectionState(connection.state)
-    }
-
-    connection.onreconnecting(syncState)
-    connection.onreconnected(syncState)
-    connection.onclose(syncState)
-
-    connection.start().then(syncState, syncState)
+    connection.start().catch(() => undefined)
 
     return () => {
       void connection.stop()
@@ -40,9 +29,8 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       connection,
-      connectionState,
     }),
-    [connection, connectionState],
+    [connection],
   )
 
   return createElement(SignalRContext.Provider, { value }, children)

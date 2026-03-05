@@ -1,16 +1,6 @@
-import { HubConnectionState } from "@microsoft/signalr"
-
 import { useDeviceStatus } from "@/hooks/useDeviceStatus"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-
-const connectionStateLabels: Record<HubConnectionState, string> = {
-  [HubConnectionState.Disconnected]: "Disconnected",
-  [HubConnectionState.Connected]: "Connected",
-  [HubConnectionState.Connecting]: "Connecting",
-  [HubConnectionState.Disconnecting]: "Disconnecting",
-  [HubConnectionState.Reconnecting]: "Reconnecting",
-}
 
 function formatBatteryVoltage(batteryVoltage: number | null): string {
   if (batteryVoltage === null) {
@@ -21,7 +11,7 @@ function formatBatteryVoltage(batteryVoltage: number | null): string {
 }
 
 export function ConnectionBar() {
-  const { status, connectionState, isBusy, isConnecting, error, connect, disconnect, tare } = useDeviceStatus()
+  const { status, isBusy, isConnecting, error, connect, disconnect, tare } = useDeviceStatus()
   const isConnected = status.isConnected
 
   return (
@@ -35,7 +25,6 @@ export function ConnectionBar() {
         <Badge variant={isConnected ? "default" : "secondary"}>
           {isConnecting ? "Connecting..." : isConnected ? "Device Connected" : "Device Offline"}
         </Badge>
-        <Badge variant="outline">Hub: {connectionStateLabels[connectionState]}</Badge>
         <span className="text-muted-foreground">Name: {status.deviceName ?? "--"}</span>
         <span className="text-muted-foreground">Battery: {formatBatteryVoltage(status.batteryVoltage)}</span>
         <span className="text-muted-foreground">Firmware: {status.firmwareVersion ?? "--"}</span>

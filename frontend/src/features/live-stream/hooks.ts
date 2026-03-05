@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { HubConnectionState } from "@microsoft/signalr"
 
 import { useSignalR } from "@/hooks/useSignalR"
 import { ensureConnected } from "@/lib/signalr/ensureConnected"
@@ -15,7 +14,6 @@ interface UseLiveStreamResult {
   stats: LiveStatsSnapshot
   stoppedStats: LiveStreamStoppedStats | null
   streamState: LiveStreamState
-  connectionState: HubConnectionState
   isBusy: boolean
   error: string | null
   start: () => Promise<void>
@@ -52,7 +50,7 @@ function appendRollingSamples(current: ForceSamplePoint[], incoming: ForceSample
 }
 
 export function useLiveStream(): UseLiveStreamResult {
-  const { connection, connectionState } = useSignalR()
+  const { connection } = useSignalR()
   const [samples, setSamples] = useState<ForceSamplePoint[]>([])
   const [stats, setStats] = useState<LiveStatsSnapshot>(initialStats)
   const [stoppedStats, setStoppedStats] = useState<LiveStreamStoppedStats | null>(null)
@@ -172,7 +170,6 @@ export function useLiveStream(): UseLiveStreamResult {
       stats,
       stoppedStats,
       streamState,
-      connectionState,
       isBusy: activeCommand !== null,
       error,
       start,
@@ -180,6 +177,6 @@ export function useLiveStream(): UseLiveStreamResult {
       save,
       discard,
     }),
-    [activeCommand, connectionState, discard, error, samples, save, start, stats, stoppedStats, stop, streamState],
+    [activeCommand, discard, error, samples, save, start, stats, stoppedStats, stop, streamState],
   )
 }
