@@ -72,15 +72,36 @@ public sealed class LiveStreamService(
                 throw new InvalidOperationException("Live stream can only stop from the streaming state.");
             }
 
-            _state = LiveStreamState.Stopped;
-            _stoppedAtUtc = DateTime.UtcNow;
             progressorService.SamplesReceived -= OnSamplesReceived;
             _flushTimer?.Dispose();
             _flushTimer = null;
         }
 
-        await progressorService.StopMeasurementAsync(cancellationToken);
-        await FlushPendingSamplesAsync();
+        try
+        {
+            await progressorService.StopMeasurementAsync(cancellationToken);
+        }
+        catch
+        {
+            lock (_gate)
+            {
+                if (_state is LiveStreamState.Streaming)
+                {
+                    progressorService.SamplesReceived += OnSamplesReceived;
+                    _flushTimer = new Timer(OnFlushTimer, null, FlushInterval, FlushInterval);
+                }
+            }
+
+            throw;
+        }
+
+        await FlushPendingSamplesAsync(allowWhenStopped: true);
+
+        lock (_gate)
+        {
+            _state = LiveStreamState.Stopped;
+            _stoppedAtUtc = DateTime.UtcNow;
+        }
 
         var stats = BuildStats();
         await notifier.SendLiveStreamStoppedAsync(stats);
@@ -189,7 +210,7 @@ public sealed class LiveStreamService(
         }
     }
 
-    private async Task FlushPendingSamplesAsync()
+    private async Task FlushPendingSamplesAsync(bool allowWhenStopped = false)
     {
         if (!await _flushLock.WaitAsync(0))
         {
@@ -198,7 +219,7 @@ public sealed class LiveStreamService(
 
         try
         {
-            if (_state is not LiveStreamState.Streaming)
+            if (!allowWhenStopped && _state is not LiveStreamState.Streaming)
             {
                 return;
             }

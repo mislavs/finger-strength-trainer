@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useSignalR } from "@/hooks/useSignalR"
 import { ensureConnected } from "@/lib/signalr/ensureConnected"
+import { getSignalRConnectionErrorMessage, toHubErrorMessage } from "@/lib/signalr/hubErrorMessage"
+
 import type {
   ForceSamplePoint,
   LiveStatsSnapshot,
@@ -32,14 +34,6 @@ const initialStats: LiveStatsSnapshot = {
   avgForceKg: null,
 }
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return "An unexpected error occurred."
-}
-
 function appendRollingSamples(current: ForceSamplePoint[], incoming: ForceSamplePoint[]): ForceSamplePoint[] {
   const merged = [...current, ...incoming]
   if (merged.length <= maxRenderedSamples) {
@@ -64,6 +58,8 @@ export function useLiveStream(): UseLiveStreamResult {
         return
       }
 
+      setStreamState("streaming")
+      setError(null)
       setSamples((currentSamples) => appendRollingSamples(currentSamples, incomingSamples))
       setStats((currentStats) => {
         const latest = incomingSamples[incomingSamples.length - 1]
@@ -100,15 +96,48 @@ export function useLiveStream(): UseLiveStreamResult {
   }, [connection])
 
   const runCommand = useCallback(
+    async (command: LiveStreamCommand): Promise<boolean> => {
+      setActiveCommand(command)
+      setError(null)
+
+      try {
+        await ensureConnected(connection)
+      } catch {
+        setError(getSignalRConnectionErrorMessage())
+        setActiveCommand(null)
+        return false
+      }
+
+      try {
+        await connection.invoke(command)
+        return true
+      } catch (commandError) {
+        setError(toHubErrorMessage(commandError))
+        return false
+      } finally {
+        setActiveCommand(null)
+      }
+    },
+    [connection],
+  )
+
+  const runCommandWithResult = useCallback(
     async <TResult,>(command: LiveStreamCommand): Promise<TResult | null> => {
       setActiveCommand(command)
       setError(null)
 
       try {
         await ensureConnected(connection)
+      } catch {
+        setError(getSignalRConnectionErrorMessage())
+        setActiveCommand(null)
+        return null
+      }
+
+      try {
         return await connection.invoke<TResult>(command)
       } catch (commandError) {
-        setError(toErrorMessage(commandError))
+        setError(toHubErrorMessage(commandError))
         return null
       } finally {
         setActiveCommand(null)
@@ -122,8 +151,8 @@ export function useLiveStream(): UseLiveStreamResult {
     setStats(initialStats)
     setStoppedStats(null)
 
-    const result = await runCommand<void>("StartLiveStream")
-    if (result === null) {
+    const succeeded = await runCommand("StartLiveStream")
+    if (!succeeded) {
       return
     }
 
@@ -131,8 +160,8 @@ export function useLiveStream(): UseLiveStreamResult {
   }, [runCommand])
 
   const stop = useCallback(async () => {
-    const result = await runCommand<void>("StopLiveStream")
-    if (result === null) {
+    const succeeded = await runCommand("StopLiveStream")
+    if (!succeeded) {
       return
     }
 
@@ -140,7 +169,7 @@ export function useLiveStream(): UseLiveStreamResult {
   }, [runCommand])
 
   const save = useCallback(async (): Promise<string | null> => {
-    const sessionId = await runCommand<string>("SaveLiveStream")
+    const sessionId = await runCommandWithResult<string>("SaveLiveStream")
     if (!sessionId) {
       return null
     }
@@ -150,11 +179,11 @@ export function useLiveStream(): UseLiveStreamResult {
     setStats(initialStats)
     setStoppedStats(null)
     return sessionId
-  }, [runCommand])
+  }, [runCommandWithResult])
 
   const discard = useCallback(async () => {
-    const result = await runCommand<void>("DiscardLiveStream")
-    if (result === null) {
+    const succeeded = await runCommand("DiscardLiveStream")
+    if (!succeeded) {
       return
     }
 

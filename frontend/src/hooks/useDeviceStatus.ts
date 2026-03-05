@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { ApiClientError, apiRequest } from "@/lib/api-client"
 import { ensureConnected } from "@/lib/signalr/ensureConnected"
+import { getSignalRConnectionErrorMessage, toHubErrorMessage } from "@/lib/signalr/hubErrorMessage"
 import { useSignalR } from "@/hooks/useSignalR"
 
 interface DeviceStatus {
@@ -43,16 +44,12 @@ function normalizeStatus(status: Partial<DeviceStatus> | null | undefined): Devi
   }
 }
 
-function toErrorMessage(error: unknown): string {
+function toStatusLoadErrorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     return error.message
   }
 
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return "An unexpected error occurred."
+  return "Something went wrong. Please try again."
 }
 
 export function useDeviceStatus(): UseDeviceStatusResult {
@@ -77,7 +74,7 @@ export function useDeviceStatus(): UseDeviceStatusResult {
           return
         }
 
-        setError(toErrorMessage(loadError))
+        setError(toStatusLoadErrorMessage(loadError))
       }
     }
 
@@ -107,9 +104,16 @@ export function useDeviceStatus(): UseDeviceStatusResult {
 
       try {
         await ensureConnected(connection)
+      } catch {
+        setError(getSignalRConnectionErrorMessage())
+        setActiveCommand(null)
+        return
+      }
+
+      try {
         await connection.invoke(command)
       } catch (commandError) {
-        setError(toErrorMessage(commandError))
+        setError(toHubErrorMessage(commandError))
       } finally {
         setActiveCommand(null)
       }

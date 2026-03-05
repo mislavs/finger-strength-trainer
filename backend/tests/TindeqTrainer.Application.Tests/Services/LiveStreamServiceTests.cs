@@ -121,6 +121,31 @@ public sealed class LiveStreamServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task StopAsync_WhenDeviceStopFailsOnce_AllowsRetry()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _sut.StartAsync(cancellationToken);
+        var stopAttempts = 0;
+        _progressorService.StopMeasurementAsync(cancellationToken).Returns(_ =>
+        {
+            stopAttempts++;
+            return stopAttempts == 1
+                ? Task.FromException(new InvalidOperationException("Failed to send stop command."))
+                : Task.CompletedTask;
+        });
+
+        // Act
+        Func<Task> firstStop = async () => await _sut.StopAsync(cancellationToken);
+        var secondStop = async () => await _sut.StopAsync(cancellationToken);
+
+        // Assert
+        await firstStop.Should().ThrowAsync<InvalidOperationException>();
+        await secondStop.Should().NotThrowAsync();
+        await _progressorService.Received(2).StopMeasurementAsync(cancellationToken);
+    }
+
+    [Fact]
     public async Task FlushTimer_WhenSamplesPending_SendsDecimatedAveragedSample()
     {
         // Arrange

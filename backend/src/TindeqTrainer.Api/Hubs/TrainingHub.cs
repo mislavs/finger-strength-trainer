@@ -6,8 +6,7 @@ namespace TindeqTrainer.Api.Hubs;
 
 public class TrainingHub(
     IProgressorService _progressorService,
-    LiveStreamService _liveStreamService,
-    ILogger<TrainingHub> _logger) : Hub
+    LiveStreamService _liveStreamService) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -18,100 +17,42 @@ public class TrainingHub(
     public async Task Connect()
     {
         var ct = Context.ConnectionAborted;
-
-        try
-        {
-            await _progressorService.ConnectAsync(ct);
-            await _progressorService.GetBatteryVoltageAsync(ct);
-            await _progressorService.GetFirmwareVersionAsync(ct);
-
-            await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(Connect));
-            throw;
-        }
+        await _progressorService.ConnectAsync(ct);
+        await _progressorService.GetBatteryVoltageAsync(ct);
+        await _progressorService.GetFirmwareVersionAsync(ct);
+        await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), ct);
     }
 
     public async Task Disconnect()
     {
-        try
-        {
-            await _progressorService.DisconnectAsync();
-            await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), Context.ConnectionAborted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(Disconnect));
-            throw;
-        }
+        await _progressorService.DisconnectAsync();
+        await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), Context.ConnectionAborted);
     }
 
     public async Task Tare()
     {
-        try
-        {
-            await _progressorService.TareAsync(Context.ConnectionAborted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(Tare));
-            throw;
-        }
+        await _progressorService.TareAsync(Context.ConnectionAborted);
     }
 
     public async Task StartLiveStream()
     {
-        try
-        {
-            await _liveStreamService.StartAsync(Context.ConnectionAborted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(StartLiveStream));
-            throw;
-        }
+        await _liveStreamService.StartAsync(Context.ConnectionAborted);
     }
 
     public async Task StopLiveStream()
     {
-        try
-        {
-            await _liveStreamService.StopAsync(Context.ConnectionAborted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(StopLiveStream));
-            throw;
-        }
+        await _liveStreamService.StopAsync(Context.ConnectionAborted);
     }
 
     public async Task<Guid> SaveLiveStream()
     {
-        try
-        {
-            return await _liveStreamService.SaveAsync(Context.ConnectionAborted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(SaveLiveStream));
-            throw;
-        }
+        return await _liveStreamService.SaveAsync(Context.ConnectionAborted);
     }
 
     public Task DiscardLiveStream()
     {
-        try
-        {
-            _liveStreamService.Discard();
-            return Task.CompletedTask;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hub method {Method} failed", nameof(DiscardLiveStream));
-            throw;
-        }
+        _liveStreamService.Discard();
+        return Task.CompletedTask;
     }
 
     private DeviceStatusDto BuildDeviceStatus()

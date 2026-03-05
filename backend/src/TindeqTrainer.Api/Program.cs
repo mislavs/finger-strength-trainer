@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.SignalR;
 using Serilog;
 using TindeqTrainer.Api.Endpoints;
 using TindeqTrainer.Api.Hubs;
@@ -27,12 +28,16 @@ try
         .AddApplication()
         .AddInfrastructure(builder.Configuration);
 
-    builder.Services.AddSignalR(options =>
+    var signalRBuilder = builder.Services.AddSignalR(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
             options.EnableDetailedErrors = true;
         }
+    });
+    signalRBuilder.AddHubOptions<TrainingHub>(options =>
+    {
+        options.AddFilter<HubExceptionFilter>();
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
