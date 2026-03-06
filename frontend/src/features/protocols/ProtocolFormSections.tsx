@@ -1,21 +1,21 @@
-import { Controller, type UseFormReturn } from "react-hook-form"
-import { Loader2 } from "lucide-react"
+import { Controller, type UseFormReturn } from "react-hook-form";
+import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   timingFields,
   toggleFields,
   type NumericFieldName,
   weightFields,
-} from "@/features/protocols/protocol-form.constants"
-import type { ProtocolFormValues } from "@/features/protocols/schema"
+} from "@/features/protocols/protocol-form.constants";
+import type { ProtocolFormValues } from "@/features/protocols/schema";
 
 function getErrorMessage(message: unknown): string | undefined {
-  return typeof message === "string" ? message : undefined
+  return typeof message === "string" ? message : undefined;
 }
 
 interface FieldErrorProps {
@@ -24,10 +24,10 @@ interface FieldErrorProps {
 
 function FieldError({ message }: FieldErrorProps) {
   if (!message) {
-    return null
+    return null;
   }
 
-  return <p className="text-sm text-destructive">{message}</p>
+  return <p className="text-sm text-destructive">{message}</p>;
 }
 
 interface NumericInputFieldProps {
@@ -44,7 +44,7 @@ function NumericInputField({ form, name, label, step }: NumericInputFieldProps) 
       <Input id={name} type="number" step={step} {...form.register(name, { valueAsNumber: true })} />
       <FieldError message={getErrorMessage(form.formState.errors[name]?.message)} />
     </div>
-  )
+  );
 }
 
 interface ProtocolFormSectionsProps {
@@ -129,5 +129,5 @@ export function ProtocolFormSections({
         </Button>
       </div>
     </>
-  )
+  );
 }

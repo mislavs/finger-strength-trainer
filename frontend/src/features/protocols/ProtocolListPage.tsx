@@ -1,16 +1,16 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DeleteProtocolDialog } from "@/features/protocols/DeleteProtocolDialog"
-import { useProtocols } from "@/features/protocols/hooks"
-import type { ProtocolSummary } from "@/features/protocols/models"
-import { appRoutes } from "@/lib/app-routes"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DeleteProtocolDialog } from "@/features/protocols/DeleteProtocolDialog";
+import { useProtocols } from "@/features/protocols/hooks";
+import type { ProtocolSummary } from "@/features/protocols/models";
+import { appRoutes } from "@/lib/app-routes";
 
 function ProtocolListSkeleton() {
   return (
@@ -19,20 +19,20 @@ function ProtocolListSkeleton() {
         <Skeleton key={index} className="h-10 w-full" />
       ))}
     </div>
-  )
+  );
 }
 
 export function ProtocolListPage() {
-  const protocolsQuery = useProtocols()
-  const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null)
+  const protocolsQuery = useProtocols();
+  const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null);
 
-  const openDeleteDialog = (protocol: ProtocolSummary) => setProtocolToDelete(protocol)
-  const closeDeleteDialog = () => setProtocolToDelete(null)
+  const openDeleteDialog = (protocol: ProtocolSummary) => setProtocolToDelete(protocol);
+  const closeDeleteDialog = () => setProtocolToDelete(null);
   const handleDeleteDialogChange = (open: boolean) => {
     if (!open) {
-      closeDeleteDialog()
+      closeDeleteDialog();
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -118,5 +118,5 @@ export function ProtocolListPage() {
 
       <DeleteProtocolDialog protocol={protocolToDelete} open={Boolean(protocolToDelete)} onOpenChange={handleDeleteDialogChange} />
     </div>
-  )
+  );
 }

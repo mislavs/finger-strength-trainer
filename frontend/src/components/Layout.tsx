@@ -1,12 +1,12 @@
-import { NavLink, Outlet } from "react-router-dom"
-import { navigationItems } from "@/lib/app-routes"
-import { ConnectionBar } from "@/components/ConnectionBar"
+import { NavLink, Outlet } from "react-router-dom";
+import { navigationItems } from "@/lib/app-routes";
+import { ConnectionBar } from "@/components/ConnectionBar";
 
 function navClassName(isActive: boolean): string {
   return [
     "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
     isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-  ].join(" ")
+  ].join(" ");
 }
 
 export function Layout() {
@@ -28,5 +28,5 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

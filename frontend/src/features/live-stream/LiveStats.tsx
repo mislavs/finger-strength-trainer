@@ -1,19 +1,19 @@
-import type { LiveStatsSnapshot } from "@/features/live-stream/models"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { LiveStatsSnapshot } from "@/features/live-stream/models";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface LiveStatsProps {
   stats: LiveStatsSnapshot
 }
 
 function formatForce(value: number): string {
-  return `${value.toFixed(1)} kg`
+  return `${value.toFixed(1)} kg`;
 }
 
 function formatDuration(totalSeconds: number): string {
-  const wholeSeconds = Math.max(0, Math.floor(totalSeconds))
-  const minutes = Math.floor(wholeSeconds / 60)
-  const seconds = wholeSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  const wholeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  const seconds = wholeSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
@@ -26,11 +26,11 @@ function StatCard({ label, value }: { label: string; value: string }) {
         <p className="text-2xl font-semibold">{value}</p>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export function LiveStats({ stats }: LiveStatsProps) {
-  const average = stats.avgForceKg === null ? "--" : formatForce(stats.avgForceKg)
+  const average = stats.avgForceKg === null ? "--" : formatForce(stats.avgForceKg);
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -39,5 +39,5 @@ export function LiveStats({ stats }: LiveStatsProps) {
       <StatCard label="Duration" value={formatDuration(stats.durationSeconds)} />
       <StatCard label="Average Force" value={average} />
     </div>
-  )
+  );
 }

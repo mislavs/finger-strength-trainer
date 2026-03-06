@@ -1,5 +1,5 @@
-import type { LiveStreamStoppedStats } from "@/features/live-stream/models"
-import { Button } from "@/components/ui/button"
+import type { LiveStreamStoppedStats } from "@/features/live-stream/models";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 interface SaveDiscardDialogProps {
   open: boolean
@@ -18,14 +18,14 @@ interface SaveDiscardDialogProps {
 }
 
 function formatForce(value: number): string {
-  return `${value.toFixed(1)} kg`
+  return `${value.toFixed(1)} kg`;
 }
 
 function formatDuration(totalSeconds: number): string {
-  const wholeSeconds = Math.max(0, Math.floor(totalSeconds))
-  const minutes = Math.floor(wholeSeconds / 60)
-  const seconds = wholeSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  const wholeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  const seconds = wholeSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 export function SaveDiscardDialog({ open, stats, isBusy, onSave, onDiscard }: SaveDiscardDialogProps) {
@@ -60,5 +60,5 @@ export function SaveDiscardDialog({ open, stats, isBusy, onSave, onDiscard }: Sa
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

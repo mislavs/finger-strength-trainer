@@ -1,25 +1,25 @@
-import { useMemo, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
-import { Trash2 } from "lucide-react"
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 
-import { ForceChart } from "@/components/ForceChart"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DeleteSessionDialog } from "@/features/history/DeleteSessionDialog"
-import { useSession } from "@/features/history/hooks"
-import { appRoutes } from "@/lib/app-routes"
+import { ForceChart } from "@/components/ForceChart";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteSessionDialog } from "@/features/history/DeleteSessionDialog";
+import { useSession } from "@/features/history/hooks";
+import { appRoutes } from "@/lib/app-routes";
 
 function formatDuration(seconds: number): string {
-  const roundedSeconds = Math.max(0, Math.round(seconds))
+  const roundedSeconds = Math.max(0, Math.round(seconds));
   if (roundedSeconds < 60) {
-    return `${roundedSeconds}s`
+    return `${roundedSeconds}s`;
   }
 
-  const minutes = Math.floor(roundedSeconds / 60)
-  const remainingSeconds = roundedSeconds % 60
-  return `${minutes}m ${remainingSeconds}s`
+  const minutes = Math.floor(roundedSeconds / 60);
+  const remainingSeconds = roundedSeconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
 }
 
 function SessionDetailSkeleton() {
@@ -29,14 +29,14 @@ function SessionDetailSkeleton() {
       <Skeleton className="h-40 w-full" />
       <Skeleton className="h-96 w-full" />
     </div>
-  )
+  );
 }
 
 export function SessionDetailPage() {
-  const { id = "" } = useParams()
-  const navigate = useNavigate()
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const sessionQuery = useSession(id)
+  const { id = "" } = useParams();
+  const navigate = useNavigate();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const sessionQuery = useSession(id);
 
   const chartSamples = useMemo(
     () =>
@@ -45,14 +45,14 @@ export function SessionDetailPage() {
         timestampSeconds: sample.timestampSeconds,
       })) ?? [],
     [sessionQuery.data?.samples],
-  )
+  );
 
   if (!id) {
-    return <p className="text-sm text-destructive">Invalid session ID.</p>
+    return <p className="text-sm text-destructive">Invalid session ID.</p>;
   }
 
   if (sessionQuery.isLoading) {
-    return <SessionDetailSkeleton />
+    return <SessionDetailSkeleton />;
   }
 
   if (sessionQuery.isError || !sessionQuery.data) {
@@ -63,10 +63,10 @@ export function SessionDetailPage() {
           <Link to={appRoutes.history}>Back to History</Link>
         </Button>
       </div>
-    )
+    );
   }
 
-  const session = sessionQuery.data
+  const session = sessionQuery.data;
 
   return (
     <div className="space-y-4">
@@ -144,5 +144,5 @@ export function SessionDetailPage() {
         onDeleted={() => navigate(appRoutes.history)}
       />
     </div>
-  )
+  );
 }

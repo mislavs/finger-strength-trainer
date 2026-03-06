@@ -3,7 +3,7 @@ import type {
   ProtocolDto,
   ProtocolSummaryDto,
   UpdateProtocolRequest,
-} from "@/lib/api/schemas"
+} from "@/lib/api/schemas";
 
 type RequiredNonNullable<T> = {
   [K in keyof T]-?: NonNullable<T[K]>
@@ -26,7 +26,7 @@ export const protocolFieldNames: Array<keyof ProtocolInput> = [
   "countdownSeconds",
   "audioCues",
   "countdownBeeps",
-]
+];
 
 export const defaultProtocolInput: ProtocolInput = {
   name: "",
@@ -39,7 +39,7 @@ export const defaultProtocolInput: ProtocolInput = {
   countdownSeconds: 5,
   audioCues: true,
   countdownBeeps: true,
-}
+};
 
 export function toProtocolInput(protocol: Protocol): ProtocolInput {
   const {
@@ -53,7 +53,7 @@ export function toProtocolInput(protocol: Protocol): ProtocolInput {
     countdownSeconds,
     audioCues,
     countdownBeeps,
-  } = protocol
+  } = protocol;
 
   return {
     name,
@@ -66,5 +66,5 @@ export function toProtocolInput(protocol: Protocol): ProtocolInput {
     countdownSeconds,
     audioCues,
     countdownBeeps,
-  }
+  };
 }

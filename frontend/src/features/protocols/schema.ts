@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 export const protocolSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(150, "Name must be 150 characters or less."),
@@ -11,6 +11,6 @@ export const protocolSchema = z.object({
   countdownSeconds: z.number().min(0, "Countdown seconds must be 0 or greater."),
   audioCues: z.boolean(),
   countdownBeeps: z.boolean(),
-})
+});
 
 export type ProtocolFormValues = z.infer<typeof protocolSchema>

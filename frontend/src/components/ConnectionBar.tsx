@@ -1,18 +1,18 @@
-import { useDeviceStatus } from "@/hooks/useDeviceStatus"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { useDeviceStatus } from "@/hooks/useDeviceStatus";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 function formatBatteryVoltage(batteryVoltage: number | null): string {
   if (batteryVoltage === null) {
-    return "--"
+    return "--";
   }
 
-  return `${batteryVoltage.toFixed(2)} V`
+  return `${batteryVoltage.toFixed(2)} V`;
 }
 
 export function ConnectionBar() {
-  const { status, isBusy, isConnecting, error, connect, disconnect, tare } = useDeviceStatus()
-  const isConnected = status.isConnected
+  const { status, isBusy, isConnecting, error, connect, disconnect, tare } = useDeviceStatus();
+  const isConnected = status.isConnected;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
@@ -46,5 +46,5 @@ export function ConnectionBar() {
 
       {error ? <p className="w-full text-xs text-destructive">{error}</p> : null}
     </div>
-  )
+  );
 }

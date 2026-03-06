@@ -1,6 +1,6 @@
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,9 +8,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { useDeleteSession } from "@/features/history/hooks"
-import type { SessionSummary } from "@/features/history/models"
+} from "@/components/ui/dialog";
+import { useDeleteSession } from "@/features/history/hooks";
+import type { SessionSummary } from "@/features/history/models";
 
 interface DeleteSessionDialogProps {
   session: SessionSummary | null
@@ -20,20 +20,20 @@ interface DeleteSessionDialogProps {
 }
 
 export function DeleteSessionDialog({ session, open, onOpenChange, onDeleted }: DeleteSessionDialogProps) {
-  const deleteSession = useDeleteSession()
-  const isSubmitting = deleteSession.isPending
+  const deleteSession = useDeleteSession();
+  const isSubmitting = deleteSession.isPending;
 
   async function handleDelete(): Promise<void> {
     if (!session) {
-      return
+      return;
     }
 
-    await deleteSession.mutateAsync(session.id)
-    onOpenChange(false)
-    onDeleted?.()
+    await deleteSession.mutateAsync(session.id);
+    onOpenChange(false);
+    onDeleted?.();
   }
 
-  const sessionLabel = session ? `${new Date(session.date).toLocaleString()} (${session.protocolName})` : "this session"
+  const sessionLabel = session ? `${new Date(session.date).toLocaleString()} (${session.protocolName})` : "this session";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,5 +55,5 @@ export function DeleteSessionDialog({ session, open, onOpenChange, onDeleted }: 
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

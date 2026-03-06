@@ -1,52 +1,52 @@
-import { useMemo } from "react"
-import { toast } from "sonner"
+import { useMemo } from "react";
+import { toast } from "sonner";
 
-import { ForceChart } from "@/components/ForceChart"
-import { useDeviceStatus } from "@/hooks/useDeviceStatus"
-import { useLiveStream } from "@/features/live-stream/hooks"
-import { LiveStats } from "@/features/live-stream/LiveStats"
-import { SaveDiscardDialog } from "@/features/live-stream/SaveDiscardDialog"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ForceChart } from "@/components/ForceChart";
+import { useDeviceStatus } from "@/hooks/useDeviceStatus";
+import { useLiveStream } from "@/features/live-stream/hooks";
+import { LiveStats } from "@/features/live-stream/LiveStats";
+import { SaveDiscardDialog } from "@/features/live-stream/SaveDiscardDialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const streamLabels = {
   idle: "Idle",
   streaming: "Streaming",
   stopped: "Stopped",
-} as const
+} as const;
 
 export function LiveStreamPage() {
-  const { status: deviceStatus } = useDeviceStatus()
-  const { samples, stats, stoppedStats, streamState, isBusy, error, start, stop, save, discard } = useLiveStream()
+  const { status: deviceStatus } = useDeviceStatus();
+  const { samples, stats, stoppedStats, streamState, isBusy, error, start, stop, save, discard } = useLiveStream();
 
   const primaryAction = useMemo(() => {
     if (streamState === "streaming") {
       return {
         label: "Stop Live Stream",
         onClick: () => void stop(),
-      }
+      };
     }
 
     return {
       label: "Start Live Stream",
       onClick: () => void start(),
-    }
-  }, [start, stop, streamState])
+    };
+  }, [start, stop, streamState]);
 
-  const canStart = streamState !== "streaming"
-  const isPrimaryDisabled = isBusy || (canStart && !deviceStatus.isConnected)
+  const canStart = streamState !== "streaming";
+  const isPrimaryDisabled = isBusy || (canStart && !deviceStatus.isConnected);
 
   const handleSave = async () => {
-    const sessionId = await save()
+    const sessionId = await save();
     if (sessionId) {
-      toast.success("Live stream saved.")
+      toast.success("Live stream saved.");
     }
-  }
+  };
 
   const handleDiscard = async () => {
-    await discard()
-    toast.success("Live stream discarded.")
-  }
+    await discard();
+    toast.success("Live stream discarded.");
+  };
 
   return (
     <div className="space-y-4">
@@ -97,5 +97,5 @@ export function LiveStreamPage() {
         onDiscard={handleDiscard}
       />
     </div>
-  )
+  );
 }

@@ -1,11 +1,11 @@
-import { Link } from "react-router-dom"
+import { Link } from "react-router-dom";
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useSessions } from "@/features/history/hooks"
-import { appRoutes } from "@/lib/app-routes"
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSessions } from "@/features/history/hooks";
+import { appRoutes } from "@/lib/app-routes";
 
 function HistoryTableSkeleton() {
   return (
@@ -14,22 +14,22 @@ function HistoryTableSkeleton() {
         <Skeleton key={index} className="h-10 w-full" />
       ))}
     </div>
-  )
+  );
 }
 
 function formatDuration(seconds: number): string {
-  const roundedSeconds = Math.max(0, Math.round(seconds))
+  const roundedSeconds = Math.max(0, Math.round(seconds));
   if (roundedSeconds < 60) {
-    return `${roundedSeconds}s`
+    return `${roundedSeconds}s`;
   }
 
-  const minutes = Math.floor(roundedSeconds / 60)
-  const remainingSeconds = roundedSeconds % 60
-  return `${minutes}m ${remainingSeconds}s`
+  const minutes = Math.floor(roundedSeconds / 60);
+  const remainingSeconds = roundedSeconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
 }
 
 export function HistoryPage() {
-  const sessionsQuery = useSessions()
+  const sessionsQuery = useSessions();
 
   return (
     <div className="space-y-4">
@@ -58,7 +58,7 @@ export function HistoryPage() {
               <TableBody>
                 {sessionsQuery.data?.length ? (
                   sessionsQuery.data.map((session) => {
-                    const detailPath = appRoutes.historyDetail.replace(":id", session.id)
+                    const detailPath = appRoutes.historyDetail.replace(":id", session.id);
 
                     return (
                       <TableRow key={session.id}>
@@ -80,7 +80,7 @@ export function HistoryPage() {
                           </Badge>
                         </TableCell>
                       </TableRow>
-                    )
+                    );
                   })
                 ) : (
                   <TableRow>
@@ -99,5 +99,5 @@ export function HistoryPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

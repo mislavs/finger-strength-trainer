@@ -1,6 +1,6 @@
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,9 +8,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { useDeleteProtocol } from "@/features/protocols/hooks"
-import type { ProtocolSummary } from "@/features/protocols/models"
+} from "@/components/ui/dialog";
+import { useDeleteProtocol } from "@/features/protocols/hooks";
+import type { ProtocolSummary } from "@/features/protocols/models";
 
 interface DeleteProtocolDialogProps {
   protocol: ProtocolSummary | null
@@ -19,17 +19,17 @@ interface DeleteProtocolDialogProps {
 }
 
 export function DeleteProtocolDialog({ protocol, open, onOpenChange }: DeleteProtocolDialogProps) {
-  const deleteProtocol = useDeleteProtocol()
+  const deleteProtocol = useDeleteProtocol();
 
-  const isSubmitting = deleteProtocol.isPending
+  const isSubmitting = deleteProtocol.isPending;
 
   async function handleDelete(): Promise<void> {
     if (!protocol) {
-      return
+      return;
     }
 
-    await deleteProtocol.mutateAsync(protocol.id)
-    onOpenChange(false)
+    await deleteProtocol.mutateAsync(protocol.id);
+    onOpenChange(false);
   }
 
   return (
@@ -52,5 +52,5 @@ export function DeleteProtocolDialog({ protocol, open, onOpenChange }: DeletePro
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

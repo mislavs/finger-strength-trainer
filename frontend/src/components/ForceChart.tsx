@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from "react"
-import uPlot from "uplot"
+import { useEffect, useMemo, useRef } from "react";
+import uPlot from "uplot";
 
-import "uplot/dist/uPlot.min.css"
+import "uplot/dist/uPlot.min.css";
 
 export interface ForceSamplePoint {
   weightKg: number
@@ -23,7 +23,7 @@ type ChartPalette = {
 }
 
 function getChartPalette(): ChartPalette {
-  const isDark = document.documentElement.classList.contains("dark")
+  const isDark = document.documentElement.classList.contains("dark");
 
   if (isDark) {
     return {
@@ -31,7 +31,7 @@ function getChartPalette(): ChartPalette {
       axisLine: "#64748b",
       gridLine: "rgba(148, 163, 184, 0.25)",
       seriesLine: "#60a5fa",
-    }
+    };
   }
 
   return {
@@ -39,37 +39,37 @@ function getChartPalette(): ChartPalette {
     axisLine: "#94a3b8",
     gridLine: "rgba(100, 116, 139, 0.25)",
     seriesLine: "#2563eb",
-  }
+  };
 }
 
 function buildPlotData(samples: ForceSamplePoint[], windowSeconds: number): PlotData {
   if (samples.length === 0) {
-    return [[], []]
+    return [[], []];
   }
 
-  const latestTimestamp = samples[samples.length - 1].timestampSeconds
-  const minimumTimestamp = Math.max(0, latestTimestamp - windowSeconds)
-  const visibleSamples = samples.filter((sample) => sample.timestampSeconds >= minimumTimestamp)
+  const latestTimestamp = samples[samples.length - 1].timestampSeconds;
+  const minimumTimestamp = Math.max(0, latestTimestamp - windowSeconds);
+  const visibleSamples = samples.filter((sample) => sample.timestampSeconds >= minimumTimestamp);
 
   return [
     visibleSamples.map((sample) => sample.timestampSeconds),
     visibleSamples.map((sample) => sample.weightKg),
-  ]
+  ];
 }
 
 export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceChartProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const plotRef = useRef<uPlot | null>(null)
-  const data = useMemo(() => buildPlotData(samples, windowSeconds), [samples, windowSeconds])
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const plotRef = useRef<uPlot | null>(null);
+  const data = useMemo(() => buildPlotData(samples, windowSeconds), [samples, windowSeconds]);
 
   useEffect(() => {
     if (!containerRef.current || plotRef.current) {
-      return
+      return;
     }
 
-    const container = containerRef.current
-    const initialWidth = Math.max(320, Math.floor(container.clientWidth))
-    const palette = getChartPalette()
+    const container = containerRef.current;
+    const initialWidth = Math.max(320, Math.floor(container.clientWidth));
+    const palette = getChartPalette();
     const options: uPlot.Options = {
       width: initialWidth,
       height,
@@ -101,37 +101,37 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceC
         },
       ],
       legend: { show: false },
-    }
+    };
 
-    plotRef.current = new uPlot(options, data, container)
+    plotRef.current = new uPlot(options, data, container);
 
     return () => {
-      plotRef.current?.destroy()
-      plotRef.current = null
-    }
-  }, [data, height])
+      plotRef.current?.destroy();
+      plotRef.current = null;
+    };
+  }, [data, height]);
 
   useEffect(() => {
-    plotRef.current?.setData(data)
-  }, [data])
+    plotRef.current?.setData(data);
+  }, [data]);
 
   useEffect(() => {
     if (!containerRef.current || !plotRef.current) {
-      return
+      return;
     }
 
-    const container = containerRef.current
+    const container = containerRef.current;
     const resizeObserver = new ResizeObserver((entries) => {
-      const nextWidth = Math.max(320, Math.floor(entries[0].contentRect.width))
+      const nextWidth = Math.max(320, Math.floor(entries[0].contentRect.width));
       plotRef.current?.setSize({
         width: nextWidth,
         height,
-      })
-    })
+      });
+    });
 
-    resizeObserver.observe(container)
-    return () => resizeObserver.disconnect()
-  }, [height])
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [height]);
 
-  return <div ref={containerRef} className="w-full rounded-md border bg-card p-2" />
+  return <div ref={containerRef} className="w-full rounded-md border bg-card p-2" />;
 }

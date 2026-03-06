@@ -1,17 +1,17 @@
-import { Navigate, Route, Routes } from "react-router-dom"
+import { Navigate, Route, Routes } from "react-router-dom";
 
-import { Layout } from "@/components/Layout"
-import { HistoryPage } from "@/features/history/HistoryPage"
-import { SessionDetailPage } from "@/features/history/SessionDetailPage"
-import { LiveStreamPage } from "@/features/live-stream/LiveStreamPage"
-import { ProtocolFormPage } from "@/features/protocols/ProtocolFormPage"
-import { ProtocolListPage } from "@/features/protocols/ProtocolListPage"
-import { appRoutes } from "@/lib/app-routes"
-import { PlaceholderPage } from "@/pages/PlaceholderPage"
+import { Layout } from "@/components/Layout";
+import { HistoryPage } from "@/features/history/HistoryPage";
+import { SessionDetailPage } from "@/features/history/SessionDetailPage";
+import { LiveStreamPage } from "@/features/live-stream/LiveStreamPage";
+import { ProtocolFormPage } from "@/features/protocols/ProtocolFormPage";
+import { ProtocolListPage } from "@/features/protocols/ProtocolListPage";
+import { appRoutes } from "@/lib/app-routes";
+import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
 const placeholderRoutes = [
   { path: appRoutes.repeater.slice(1), title: "Repeater" },
-] as const
+] as const;
 
 function App() {
   return (
@@ -30,7 +30,7 @@ function App() {
         <Route path="*" element={<Navigate to={appRoutes.protocols} replace />} />
       </Route>
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;
