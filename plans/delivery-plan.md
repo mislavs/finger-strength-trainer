@@ -4,7 +4,7 @@
 
 1. **Greenfield** -- only [docs/PRD.md](../docs/PRD.md) and [docs/TECHNICAL.md](../docs/TECHNICAL.md) exist; no code yet.
 2. Architecture adapts the TECHNICAL.md's 2-project layout (`Core` / `Api`) to **4-project Clean Architecture** per the dotnet-backend skill: Domain, Infrastructure, Application, Api.
-3. **MediatR/CQRS** for REST-based Protocol and Session features. Real-time training orchestration (BLE, timer, training sessions) uses regular DI services invoked from the SignalR hub -- MediatR is not a good fit for long-running stateful operations.
+3. **MediatR/CQRS** for REST-based Protocol and Session features. Real-time BLE and session management uses regular DI services invoked from the SignalR hub -- MediatR is not a good fit for long-running stateful operations. **The training timer is frontend-owned** -- the backend does not run a timer; it reacts to phase-change signals from the frontend for BLE coordination and data management.
 4. **SQLite** for persistence. Integration tests use EF Core SQLite in-memory provider (no Testcontainers/Docker needed, deviating from the dotnet-backend skill's PostgreSQL pattern).
 5. Frontend follows the **scaffolding-frontend-spa** skill stack: Vite, React, TypeScript, TanStack Query, Tailwind, shadcn/ui, react-router-dom, react-hook-form + zod.
 6. **.NET 10** targeting `net10.0-windows10.0.19041.0` for WinRT Bluetooth APIs.
@@ -30,7 +30,7 @@ backend/
       Features/
         Protocols/       CRUD commands/queries (MediatR)
         Sessions/        List/Get/Delete/Export queries (MediatR)
-      Services/          TimerService, TrainingOrchestrator, LiveStreamService
+      Services/          TrainingSessionService, LiveStreamService
       Common/Behaviors/  ValidationBehavior
     TindeqTrainer.Api/
       Hubs/              TrainingHub (SignalR -- thin, delegates to Application services)
@@ -184,66 +184,94 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 6: Timer State Machine
+## Step 6: Timer State Machine (Frontend)
 
-- **Goal:** Implement the work/rest/countdown/hand-switch state machine that drives repeater training.
+- **Goal:** Implement the work/rest/countdown/hand-switch timer as a frontend feature, giving users visible phase-driven countdowns for repeater training.
 - **Scope:**
-  - **Application:** `TimerService`:
-    - State machine: `Idle -> Countdown -> Work -> Rest -> ... -> HandSwitch -> Countdown -> Work -> ... -> Done`
-    - Internal tick at ~50ms, evaluates phase transitions
-    - `Start(protocol, firstHand)`, `Pause()`, `Resume()`, `Stop()`, `SkipHandSwitch()`
-    - Emits `TimerState` on each tick (phase, remaining seconds, current set, total sets, current hand, hand label)
-    - Emits domain events: `OnWorkStart`, `OnRestStart`, `OnHandSwitch`, `OnComplete`
-    - Pause: freezes timer, records `PhasePausedFrom`
-    - Resume: resets to brief countdown, then continues from frozen phase
-    - Last set of each hand has no rest after it
-  - **Api `TrainingHub`:** Wire throttled `TimerTick` push (~10/sec)
-  - **Frontend:** `TimerDisplay` component (phase label, countdown, set counter) -- can be tested standalone with mock data
+  - **Protocol model update** (extends the existing `Protocol` entity from Step 2):
+    - Rename `SetsPerHand` -> `RepsPerSet` (number of work/rest cycles per hand per set)
+    - Add `NumberOfSets` field (int, number of sets, default 1)
+    - Add `SetRestSeconds` field (double, rest between sets, e.g., 240 for 4 minutes)
+    - Update backend: entity, Create/Update commands + validators, default protocol seeds (existing protocols get `NumberOfSets=1`, `SetRestSeconds=0`)
+    - Update frontend: protocol form (new fields for sets, set rest), zod schema, API types
+  - **Frontend timer engine** (`features/repeater/timer-machine.ts`):
+    - Pure TypeScript class, no React dependency -- independently testable
+    - State machine phases: `Idle`, `Countdown`, `Work`, `Rest`, `HandSwitch`, `SetRest`, `Paused`, `Done`
+    - Flow per set: `[Work -> Rest]×(reps-1) -> Work` for hand 1 -> `HandSwitch` -> same for hand 2; then `SetRest` between sets (none after last set)
+    - Full flow example (2 sets, 3 reps): `Countdown -> Work->Rest->Work->Rest->Work -> HandSwitch -> Work->Rest->Work->Rest->Work -> SetRest -> Work->Rest->Work->Rest->Work -> HandSwitch -> Work->Rest->Work->Rest->Work -> Done`
+    - `start(protocol, firstHand)`, `pause()`, `resume()`, `stop()`, `skipHandSwitch()`
+    - `tick(elapsedMs)` method called from `setInterval` (~50ms), evaluates phase transitions
+    - Returns `TimerState` on each tick (phase, remaining seconds, current rep, total reps, current set, total sets, current hand, hand label)
+    - Fires callbacks: `onWorkStart`, `onRestStart`, `onHandSwitch`, `onSetRest`, `onComplete` (used in Step 7 to signal backend)
+    - Pause: freezes remaining seconds, records `phasePausedFrom`
+    - Resume: brief countdown, then continues from frozen phase with saved remaining time
+    - Last rep of each hand has no rest after it; last set has no set rest after it
+  - **Frontend React hook** (`features/repeater/useTimer.ts`):
+    - Wraps `TimerMachine` with `setInterval`, React state, and callback refs
+    - Exposes `state`, `start()`, `pause()`, `resume()`, `stop()`, `skipHandSwitch()`
+  - **Frontend `TimerDisplay` component** (`features/repeater/TimerDisplay.tsx`):
+    - Phase label with color coding (green Work/"PULL", red Rest/"REST", amber Countdown, blue HandSwitch/"SWITCH HANDS", orange SetRest/"SET REST", gray Paused)
+    - Large countdown display (remaining seconds)
+    - Rep counter: "Rep {current} of {total}"
+    - Set counter: "Set {current} of {total}"
+    - Hand indicator: "{handLabel}"
+  - **Frontend types** (`features/repeater/models.ts`):
+    - `TimerPhase` enum (including `SetRest`), `TimerState` interface (with `currentRep`, `totalReps`, `currentSet`, `totalSets`), `TimerCallbacks` interface
+  - **`RepeaterPage`**: Replace placeholder with protocol selector + hand selector + timer UI. User can select a protocol, start the timer, and watch it count through all phases including set rest (no BLE integration yet).
 - **Tests:**
-  - **Extensive unit tests** for all state transitions:
-    - Normal flow through all phases
-    - Pause during each phase, resume correctly
+  - **Extensive Vitest unit tests** for `TimerMachine` (using manual `tick()` calls, no real timers):
+    - Normal flow: full cycle through reps, hand switch, set rest, next set, done
+    - Single-rep protocol (no rest between reps)
+    - Multi-set protocol (correct set rest between sets, none after last)
+    - Pause during each phase (including SetRest), resume correctly
     - Skip hand switch
     - Stop/abort at various phases
-    - Edge cases: single set, set count boundaries
-  - Unit tests for tick throttling logic
-- **Verification:** `dotnet build`, `dotnet test` -- all state machine transitions validated
-- **Exit Criteria:** TimerService passes comprehensive unit tests covering every phase transition and edge case
+    - Callback invocations verified (onWorkStart, onRestStart, onHandSwitch, onSetRest, onComplete)
+    - Edge cases: single rep, single set, `countdownSeconds = 0`, `setRestSeconds = 0`
+  - Backend: validator unit tests for new/renamed protocol fields
+- **Verification:** `npm run build`, `npm test`, `dotnet build`, `dotnet test`; launch app, navigate to Repeater, select a protocol, start timer, watch reps/sets/hand switches cycle
+- **Exit Criteria:** User can start a repeater timer in the browser, watch reps/sets/hand switches cycle with accurate countdowns; all tests pass
 
 ---
 
 ## Step 7: Repeater Training (Full Vertical Slice)
 
-- **Goal:** Deliver the core training feature -- structured repeater sessions with real-time feedback, pause/resume, abort/save, and post-session summary.
+- **Goal:** Deliver the core training feature -- connecting the frontend timer to BLE measurement and session persistence for structured repeater sessions with real-time force feedback.
 - **Scope:**
-  - **Application:** `TrainingOrchestrator`:
-    - Coordinates `TimerService` + `IProgressorService` + `TrainingSession`
-    - `TrainingSession`: in-memory sample collection per hand, `SetStats` calculation on work-phase end (avg force, peak force, % time above target)
-    - Start: select protocol + first hand -> tare -> countdown -> continuous measurement
-    - BLE stays measuring during rest phases (timer dictates rhythm, not BLE)
-    - On `OnWorkStart`: mark set start boundary
-    - On `OnRestStart`: compute `SetStats` for completed set, emit `SetCompleted`
-    - On `OnHandSwitch`: stop BLE, wait/skip, tare, start BLE for hand 2
-    - On `OnComplete`: build `TrainingSessionRecord` (IsComplete=true), save, emit `SessionComplete`
-    - Pause: stop BLE measurement, freeze timer
-    - Resume: tare, brief countdown, restart BLE, resume timer
-    - Abort: stop everything, build partial `TrainingSessionRecord` (IsComplete=false), emit `TrainingAborted`, prompt save/discard
-  - **Api `TrainingHub`:** Wire `StartTraining`, `PauseTraining`, `ResumeTraining`, `StopTraining`, `SaveAbortedTraining`, `DiscardAbortedTraining`, `SkipHandSwitch`; push `SetCompleted`, `SessionComplete`, `TrainingAborted`
-  - **Frontend `RepeaterPage`:**
-    - Protocol selection (from saved protocols)
-    - Hand selection (left/right first)
+  - **Application:** `TrainingSessionService` (reactive -- no timer, responds to frontend phase signals):
+    - `StartTraining(protocolId)`: load protocol, tare, start BLE measurement, begin buffering samples
+    - `WorkStarted(set, rep, hand)`: mark rep start boundary in sample buffer
+    - `WorkEnded(set, rep, hand)`: compute `SetStats` for the completed rep (avg force, peak force, % time above target), push `RepCompleted` event to frontend
+    - `HandSwitch()`: stop BLE measurement
+    - `HandSwitchComplete()`: tare, restart BLE measurement for new hand
+    - `PauseTraining()`: stop BLE measurement
+    - `ResumeTraining()`: tare, restart BLE measurement
+    - `CompleteTraining()`: build `TrainingSessionRecord` (IsComplete=true), persist to SQLite, push `SessionComplete` event
+    - `AbortTraining()`: stop BLE, build partial `TrainingSessionRecord` (IsComplete=false), push `TrainingAborted` event
+    - `SaveAbortedTraining()` / `DiscardAbortedTraining()`: persist or discard partial session
+    - In-memory sample collection per hand, force sample decimation for real-time chart (~10/sec push to frontend)
+  - **Api `TrainingHub`:** Wire all commands as hub methods; push `RepCompleted`, `SessionComplete`, `TrainingAborted`, `ForceSamples` events
+  - **Frontend `RepeaterPage` enhancement** (timer already working from Step 6):
+    - Connect `useTimer` callbacks to backend via SignalR:
+      - `onWorkStart(set, rep, hand)` -> invoke `WorkStarted`
+      - `onRestStart(set, rep, hand)` -> invoke `WorkEnded`
+      - `onHandSwitch` -> invoke `HandSwitch`; on skip/expire -> invoke `HandSwitchComplete`
+      - `onSetRest` -> no backend action needed (BLE keeps running, just resting)
+      - `onComplete` -> invoke `CompleteTraining`
+      - pause/resume/abort -> invoke corresponding hub methods
     - Training UI:
-      - Work phase: force chart with horizontal target line, "PULL" label (green), countdown, current/peak force, set counter, hand indicator
-      - Rest phase: "REST" label (red), countdown, last set summary
+      - Work phase: force chart with horizontal target force line, "PULL" label (green), countdown, current/peak force, rep counter, set counter, hand indicator
+      - Rest phase: "REST" label (red), countdown, last rep summary; target force line hidden
+      - Set rest phase: "SET REST" label, long countdown (e.g., 4:00), force chart hidden
       - Hand switch: countdown with skip button, "Set up [hand]" prompt
       - Pause overlay
-    - Post-session summary: per-hand stats table (avg force per set, peak, % above target), full force-time curve
+    - Post-session summary: per-hand stats table (avg force per rep, peak, % above target), full force-time curve
 - **Tests:**
-  - Unit tests for `TrainingOrchestrator` (uses mock `IProgressorService`)
+  - Unit tests for `TrainingSessionService` (uses mock `IProgressorService`)
   - Unit tests for `SetStats` calculation (average, peak, % time above target)
   - Integration test: complete a training session end-to-end (mock BLE), verify session persisted with correct stats
-- **Verification:** `dotnet build`, `dotnet test`; launch app with mock BLE, start a repeater session, observe phase transitions, complete session, view summary
-- **Exit Criteria:** User can run a full repeater session (both hands), see real-time feedback, view post-session summary; pause/resume and abort/save work correctly
+- **Verification:** `dotnet build`, `dotnet test`, `npm run build`, `npm test`; launch app with mock BLE, start a repeater session, observe phase transitions, complete session, view summary
+- **Exit Criteria:** User can run a full repeater session (both hands, multiple sets), see real-time feedback with target force during work, view post-session summary; pause/resume and abort/save work correctly
 
 ---
 
@@ -251,30 +279,30 @@ frontend/                              React SPA (Vite + TypeScript)
 
 - **Goal:** Add audio cues, light/dark theme toggle, and BLE reconnection handling to complete the product.
 - **Scope:**
-  - **Audio cues:**
-    - `PlaySound` SignalR event with sound type: "beep" (countdown), "go" (work start), "rest" (rest start), "done" (session complete)
-    - Frontend: play audio files on `PlaySound` events
+  - **Audio cues** (frontend-driven -- timer callbacks trigger audio directly in the browser):
+    - Sounds: "beep" (countdown tick), "go" (work start), "rest" (rest start), "done" (session complete)
     - Protocol `AudioCues` and `CountdownBeeps` flags control which sounds play
+    - No backend involvement -- audio is a pure frontend concern
   - **Theme toggle:**
     - `darkMode: 'class'` on `<html>`, default to OS preference
     - `ThemeToggle` component in nav bar
     - Persist preference in localStorage
   - **BLE reconnection:**
-    - Detect disconnect via `ConnectionStatusChanged`
-    - Pause timer, notify frontend (`ConnectionLost`)
-    - Retry connection every 2s for up to 30s
-    - On success: resume, notify frontend (`Reconnected`)
+    - Backend detects disconnect via `ConnectionStatusChanged`, notifies frontend (`ConnectionLost` SignalR event)
+    - Frontend pauses its own timer on `ConnectionLost`
+    - Backend retries connection every 2s for up to 30s
+    - On success: notify frontend (`Reconnected`), frontend resumes timer
     - On failure: prompt user to abort
   - **Remaining polish:**
     - Connection loss during training (auto-pause + reconnect flow)
-    - Hand switch skip (`SkipHandSwitch` already wired, verify UX)
+    - Hand switch skip (verify UX)
     - Incomplete session indicator in history list
     - Error boundaries and loading states
 - **Tests:**
-  - Unit tests for reconnection retry logic
-  - Unit tests for audio cue trigger conditions (respect protocol flags)
+  - Unit tests for reconnection retry logic (backend)
+  - Vitest tests for audio cue trigger conditions (respect protocol flags)
   - Manual testing: theme toggle, audio playback
-- **Verification:** `dotnet build`, `dotnet test`; launch app, toggle theme, verify audio plays on transitions, simulate BLE disconnect during training
+- **Verification:** `dotnet build`, `dotnet test`, `npm run build`, `npm test`; launch app, toggle theme, verify audio plays on transitions, simulate BLE disconnect during training
 - **Exit Criteria:** All PRD features implemented; app handles BLE disconnection gracefully; audio and theme preferences work correctly
 
 ---
@@ -283,8 +311,8 @@ frontend/                              React SPA (Vite + TypeScript)
 
 - **BLE API availability:** WinRT Bluetooth APIs require `net10.0-windows10.0.19041.0` TFM. If APIs are unavailable or behave unexpectedly, the mock service allows continued development. Mitigated by front-loading BLE work in Step 3.
 - **Real-time chart performance:** 80 Hz data via SignalR could cause rendering jank. Mitigated by server-side decimation (~10 samples/sec) and using uPlot (lightweight, canvas-based). Monitor in Step 4.
-- **Timer precision:** `System.Threading.Timer` or `PeriodicTimer` may drift. For a training app, sub-100ms precision is sufficient. The device-embedded timestamps (microseconds) provide authoritative timing for samples.
-- **SignalR backpressure:** High-frequency pushes may overwhelm slow clients. Mitigated by batching (100ms flush intervals) and configuring SignalR transport buffer sizes.
+- **Frontend timer drift:** Browser `setInterval` may drift under heavy load or if the tab loses focus. For a training app used in the foreground, sub-100ms precision is sufficient. Device-embedded timestamps (microseconds) provide authoritative timing for force samples, so timer drift does not affect data integrity.
+- **SignalR backpressure:** High-frequency pushes may overwhelm slow clients. Mitigated by batching (100ms flush intervals) and configuring SignalR transport buffer sizes. Timer is now frontend-only, eliminating ~10 tick pushes/sec.
 - **SQLite concurrent access:** Single-writer, multiple-reader. Not an issue for this single-user desktop app.
 
 ## Final Validation Checklist
