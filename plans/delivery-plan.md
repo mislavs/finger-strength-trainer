@@ -202,7 +202,7 @@ frontend/                              React SPA (Vite + TypeScript)
     - `start(protocol, firstHand)`, `pause()`, `resume()`, `stop()`, `skipHandSwitch()`
     - `tick(elapsedMs)` method called from `setInterval` (~50ms), evaluates phase transitions
     - Returns `TimerState` on each tick (phase, remaining seconds, current rep, total reps, current set, total sets, current hand, hand label)
-    - Fires callbacks: `onWorkStart`, `onRestStart`, `onHandSwitch`, `onSetRest`, `onComplete` (used in Step 7 to signal backend)
+    - Fires callbacks: `onWorkStart`, `onRestStart`, `onHandSwitch`, `onSetRestStart`, `onSetRestComplete`, `onComplete` (used in Step 7 to signal backend)
     - Pause: freezes remaining seconds, records `phasePausedFrom`
     - Resume: brief countdown, then continues from frozen phase with saved remaining time
     - Last rep of each hand has no rest after it; last set has no set rest after it
@@ -226,7 +226,7 @@ frontend/                              React SPA (Vite + TypeScript)
     - Pause during each phase (including SetRest), resume correctly
     - Skip hand switch
     - Stop/abort at various phases
-    - Callback invocations verified (onWorkStart, onRestStart, onHandSwitch, onSetRest, onComplete)
+    - Callback invocations verified (`onWorkStart`, `onRestStart`, `onHandSwitch`, `onSetRestStart`, `onSetRestComplete`, `onComplete`)
     - Edge cases: single rep, single set, `countdownSeconds = 0`, `setRestSeconds = 0`
   - Backend: validator unit tests for new/renamed protocol fields
 - **Verification:** `npm run build`, `npm test`, `dotnet build`, `dotnet test`; launch app, navigate to Repeater, select a protocol, start timer, watch reps/sets/hand switches cycle
@@ -241,9 +241,11 @@ frontend/                              React SPA (Vite + TypeScript)
   - **Application:** `TrainingSessionService` (reactive -- no timer, responds to frontend phase signals):
     - `StartTraining(protocolId)`: load protocol, tare, start BLE measurement, begin buffering samples
     - `WorkStarted(set, rep, hand)`: mark rep start boundary in sample buffer
-    - `WorkEnded(set, rep, hand)`: compute `SetStats` for the completed rep (avg force, peak force, % time above target), push `RepCompleted` event to frontend
+    - `WorkEnded(set, rep, hand)`: compute `SetStats` for the completed rep (avg force, peak force, % time above target), push `RepCompleted` event to frontend. BLE measurement continues during rep rest.
     - `HandSwitch()`: stop BLE measurement
     - `HandSwitchComplete()`: tare, restart BLE measurement for new hand
+    - `SetRestStarted()`: stop BLE measurement for the long rest between sets
+    - `SetRestComplete()`: tare, restart BLE measurement for the next set
     - `PauseTraining()`: stop BLE measurement
     - `ResumeTraining()`: tare, restart BLE measurement
     - `CompleteTraining()`: build `TrainingSessionRecord` (IsComplete=true), persist to SQLite, push `SessionComplete` event
@@ -254,9 +256,10 @@ frontend/                              React SPA (Vite + TypeScript)
   - **Frontend `RepeaterPage` enhancement** (timer already working from Step 6):
     - Connect `useTimer` callbacks to backend via SignalR:
       - `onWorkStart(set, rep, hand)` -> invoke `WorkStarted`
-      - `onRestStart(set, rep, hand)` -> invoke `WorkEnded`
+      - `onRestStart(set, rep, hand)` -> invoke `WorkEnded` (BLE measurement stays running during rep rest)
       - `onHandSwitch` -> invoke `HandSwitch`; on skip/expire -> invoke `HandSwitchComplete`
-      - `onSetRest` -> no backend action needed (BLE keeps running, just resting)
+      - `onSetRestStart` -> invoke `SetRestStarted`
+      - `onSetRestComplete` -> invoke `SetRestComplete`
       - `onComplete` -> invoke `CompleteTraining`
       - pause/resume/abort -> invoke corresponding hub methods
     - Training UI:
