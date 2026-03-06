@@ -160,7 +160,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 5: Session History
+## Step 5: Session History (DONE)
 
 - **Goal:** Users can browse, view, and export past sessions (live stream recordings saved in Step 4 become visible here).
 - **Scope:**
