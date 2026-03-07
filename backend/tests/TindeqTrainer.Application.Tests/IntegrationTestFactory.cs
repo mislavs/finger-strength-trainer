@@ -76,9 +76,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
         var defaults = new[]
         {
-            Protocol.Create("Max Repeaters 80%", 0d, 80d, 6, 7d, 3d, 30d, 5d, true, true, true, MaxRepeatersProtocolId),
-            Protocol.Create("Endurance 60%", 0d, 60d, 10, 7d, 3d, 30d, 5d, true, true, true, EnduranceProtocolId),
-            Protocol.Create("Short Power 90%", 0d, 90d, 4, 5d, 5d, 30d, 5d, true, true, true, ShortPowerProtocolId)
+            Protocol.Create("Max Repeaters 80%", 0d, 80d, 6, 1, 7d, 3d, 30d, 0d, 5d, true, true, true, MaxRepeatersProtocolId),
+            Protocol.Create("Endurance 60%", 0d, 60d, 10, 1, 7d, 3d, 30d, 0d, 5d, true, true, true, EnduranceProtocolId),
+            Protocol.Create("Short Power 90%", 0d, 90d, 4, 1, 5d, 5d, 30d, 0d, 5d, true, true, true, ShortPowerProtocolId)
         };
 
         await DbContext.Protocols.AddRangeAsync(defaults);

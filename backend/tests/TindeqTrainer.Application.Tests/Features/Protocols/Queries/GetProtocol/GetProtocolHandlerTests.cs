@@ -16,10 +16,12 @@ public class GetProtocolHandlerTests(IntegrationTestFactory factory) : Integrati
             name: "Lookup Protocol",
             maxWeightKg: 42,
             weightPercentage: 75,
-            setsPerHand: 5,
+            repsPerSet: 5,
+            numberOfSets: 2,
             workSeconds: 8,
             restSeconds: 4,
             handSwitchSeconds: 25,
+            setRestSeconds: 150,
             countdownSeconds: 3,
             audioCues: true,
             countdownBeeps: true);
@@ -34,6 +36,9 @@ public class GetProtocolHandlerTests(IntegrationTestFactory factory) : Integrati
         // Assert
         result.Id.Should().Be(protocol.Id);
         result.Name.Should().Be("Lookup Protocol");
+        result.RepsPerSet.Should().Be(5);
+        result.NumberOfSets.Should().Be(2);
+        result.SetRestSeconds.Should().Be(150);
         result.TargetWeightKg.Should().Be(31.5);
     }
 

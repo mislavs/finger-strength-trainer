@@ -16,10 +16,12 @@ public class CreateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
             Name: "Custom 75%",
             MaxWeightKg: 55,
             WeightPercentage: 75,
-            SetsPerHand: 8,
+            RepsPerSet: 8,
+            NumberOfSets: 2,
             WorkSeconds: 10,
             RestSeconds: 5,
             HandSwitchSeconds: 20,
+            SetRestSeconds: 120,
             CountdownSeconds: 4,
             AudioCues: true,
             CountdownBeeps: false);
@@ -36,6 +38,9 @@ public class CreateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
 
         protocol.Should().NotBeNull();
         protocol!.Name.Should().Be("Custom 75%");
+        protocol.RepsPerSet.Should().Be(8);
+        protocol.NumberOfSets.Should().Be(2);
+        protocol.SetRestSeconds.Should().Be(120);
         protocol.TargetWeightKg.Should().Be(41.25);
     }
 }

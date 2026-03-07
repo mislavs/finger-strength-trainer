@@ -14,13 +14,17 @@ public class Protocol
 
     public double WeightPercentage { get; private set; }
 
-    public int SetsPerHand { get; private set; }
+    public int RepsPerSet { get; private set; }
+
+    public int NumberOfSets { get; private set; }
 
     public double WorkSeconds { get; private set; }
 
     public double RestSeconds { get; private set; }
 
     public double HandSwitchSeconds { get; private set; }
+
+    public double SetRestSeconds { get; private set; }
 
     public double CountdownSeconds { get; private set; }
 
@@ -36,10 +40,12 @@ public class Protocol
         string name,
         double maxWeightKg,
         double weightPercentage,
-        int setsPerHand,
+        int repsPerSet,
+        int numberOfSets,
         double workSeconds,
         double restSeconds,
         double handSwitchSeconds,
+        double setRestSeconds,
         double countdownSeconds,
         bool audioCues,
         bool countdownBeeps,
@@ -50,10 +56,12 @@ public class Protocol
             name,
             maxWeightKg,
             weightPercentage,
-            setsPerHand,
+            repsPerSet,
+            numberOfSets,
             workSeconds,
             restSeconds,
             handSwitchSeconds,
+            setRestSeconds,
             countdownSeconds);
 
         return new Protocol
@@ -62,10 +70,12 @@ public class Protocol
             Name = normalizedName,
             MaxWeightKg = maxWeightKg,
             WeightPercentage = weightPercentage,
-            SetsPerHand = setsPerHand,
+            RepsPerSet = repsPerSet,
+            NumberOfSets = numberOfSets,
             WorkSeconds = workSeconds,
             RestSeconds = restSeconds,
             HandSwitchSeconds = handSwitchSeconds,
+            SetRestSeconds = setRestSeconds,
             CountdownSeconds = countdownSeconds,
             AudioCues = audioCues,
             CountdownBeeps = countdownBeeps,
@@ -77,10 +87,12 @@ public class Protocol
         string name,
         double maxWeightKg,
         double weightPercentage,
-        int setsPerHand,
+        int repsPerSet,
+        int numberOfSets,
         double workSeconds,
         double restSeconds,
         double handSwitchSeconds,
+        double setRestSeconds,
         double countdownSeconds,
         bool audioCues,
         bool countdownBeeps)
@@ -89,19 +101,23 @@ public class Protocol
             name,
             maxWeightKg,
             weightPercentage,
-            setsPerHand,
+            repsPerSet,
+            numberOfSets,
             workSeconds,
             restSeconds,
             handSwitchSeconds,
+            setRestSeconds,
             countdownSeconds);
 
         Name = normalizedName;
         MaxWeightKg = maxWeightKg;
         WeightPercentage = weightPercentage;
-        SetsPerHand = setsPerHand;
+        RepsPerSet = repsPerSet;
+        NumberOfSets = numberOfSets;
         WorkSeconds = workSeconds;
         RestSeconds = restSeconds;
         HandSwitchSeconds = handSwitchSeconds;
+        SetRestSeconds = setRestSeconds;
         CountdownSeconds = countdownSeconds;
         AudioCues = audioCues;
         CountdownBeeps = countdownBeeps;
@@ -111,10 +127,12 @@ public class Protocol
         string name,
         double maxWeightKg,
         double weightPercentage,
-        int setsPerHand,
+        int repsPerSet,
+        int numberOfSets,
         double workSeconds,
         double restSeconds,
         double handSwitchSeconds,
+        double setRestSeconds,
         double countdownSeconds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -124,14 +142,44 @@ public class Protocol
             throw new ArgumentOutOfRangeException(nameof(weightPercentage), "Weight percentage must be between 0 and 100.");
         }
 
-        if (setsPerHand <= 0)
+        if (repsPerSet <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(setsPerHand), "Sets per hand must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(repsPerSet), "Reps per set must be greater than zero.");
         }
 
-        if (maxWeightKg < 0 || workSeconds <= 0 || restSeconds < 0 || handSwitchSeconds < 0 || countdownSeconds < 0)
+        if (numberOfSets <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxWeightKg), "Numeric protocol settings must be non-negative and work seconds must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(numberOfSets), "Number of sets must be greater than zero.");
+        }
+
+        if (maxWeightKg < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxWeightKg), "Max weight must be non-negative.");
+        }
+
+        if (workSeconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(workSeconds), "Work seconds must be greater than zero.");
+        }
+
+        if (restSeconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(restSeconds), "Rest seconds must be non-negative.");
+        }
+
+        if (handSwitchSeconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(handSwitchSeconds), "Hand switch seconds must be non-negative.");
+        }
+
+        if (setRestSeconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(setRestSeconds), "Set rest seconds must be non-negative.");
+        }
+
+        if (countdownSeconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(countdownSeconds), "Countdown seconds must be non-negative.");
         }
 
         return name.Trim();

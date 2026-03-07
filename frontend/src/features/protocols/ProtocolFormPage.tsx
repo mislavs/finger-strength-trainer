@@ -14,6 +14,8 @@ import { defaultProtocolInput, protocolFieldNames, toProtocolInput, type Protoco
 import { protocolSchema, type ProtocolFormValues } from "@/features/protocols/schema";
 import { ProtocolFormSections } from "@/features/protocols/ProtocolFormSections";
 
+const secondsPerMinute = 60;
+
 export function ProtocolFormPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -38,11 +40,16 @@ export function ProtocolFormPage() {
   }, [form, isEditMode, protocolQuery.data]);
 
   async function onSubmit(values: ProtocolFormValues): Promise<void> {
+    const request = {
+      ...values,
+      setRestSeconds: values.setRestSeconds * secondsPerMinute,
+    };
+
     try {
       if (isEditMode) {
-        await updateProtocol.mutateAsync({ id, data: values });
+        await updateProtocol.mutateAsync({ id, data: request });
       } else {
-        await createProtocol.mutateAsync(values);
+        await createProtocol.mutateAsync(request);
       }
 
       navigate(appRoutes.protocols);

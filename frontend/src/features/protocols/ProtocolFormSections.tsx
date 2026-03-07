@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
-  timingFields,
+  timingFieldGroups,
   toggleFields,
   type NumericFieldName,
   weightFields,
@@ -89,9 +89,19 @@ export function ProtocolFormSections({
 
       <section className="space-y-3">
         <h2 className="font-medium">Timing</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {timingFields.map((field) => (
-            <NumericInputField key={field.name} form={form} name={field.name} label={field.label} step={field.step} />
+        <div className="grid gap-4 lg:grid-cols-3">
+          {timingFieldGroups.map((group) => (
+            <div key={group.title} className="space-y-3 rounded-lg border p-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium">{group.title}</h3>
+                <p className="text-sm text-muted-foreground">{group.description}</p>
+              </div>
+              <div className={group.fields.length > 1 ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
+                {group.fields.map((field) => (
+                  <NumericInputField key={field.name} form={form} name={field.name} label={field.label} step={field.step} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </section>

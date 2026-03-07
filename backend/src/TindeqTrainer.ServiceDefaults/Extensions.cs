@@ -54,6 +54,7 @@ public static class Extensions
                         options.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath) &&
                             !context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
+                    .AddEntityFrameworkCoreInstrumentation()
                     .AddHttpClientInstrumentation();
             });
 

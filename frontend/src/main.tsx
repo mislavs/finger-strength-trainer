@@ -8,8 +8,16 @@ import { Toaster } from "@/components/ui/sonner";
 import { SignalRProvider } from "@/hooks/useSignalR";
 import App from "@/App";
 import "@/index.css";
+import { initializeTelemetry } from "@/telemetry";
 
 const queryClient = new QueryClient();
+
+initializeTelemetry(
+  import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+  import.meta.env.OTEL_EXPORTER_OTLP_HEADERS,
+  import.meta.env.OTEL_RESOURCE_ATTRIBUTES,
+  import.meta.env.OTEL_SERVICE_NAME,
+);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

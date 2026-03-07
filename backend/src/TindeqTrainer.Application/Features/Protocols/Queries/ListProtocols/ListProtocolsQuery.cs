@@ -17,7 +17,8 @@ public class ListProtocolsHandler(AppDbContext dbContext) : IRequestHandler<List
                 x.Id,
                 x.Name,
                 x.WeightPercentage,
-                x.SetsPerHand,
+                x.RepsPerSet,
+                x.NumberOfSets,
                 x.WorkSeconds,
                 x.IsDefault))
             .ToListAsync(cancellationToken);

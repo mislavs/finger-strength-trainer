@@ -16,7 +16,10 @@ public class UpdateProtocolValidator : AbstractValidator<UpdateProtocolCommand>
         RuleFor(x => x.WeightPercentage)
             .InclusiveBetween(0, 100);
 
-        RuleFor(x => x.SetsPerHand)
+        RuleFor(x => x.RepsPerSet)
+            .GreaterThan(0);
+
+        RuleFor(x => x.NumberOfSets)
             .GreaterThan(0);
 
         RuleFor(x => x.WorkSeconds)
@@ -29,6 +32,9 @@ public class UpdateProtocolValidator : AbstractValidator<UpdateProtocolCommand>
             .GreaterThanOrEqualTo(0);
 
         RuleFor(x => x.HandSwitchSeconds)
+            .GreaterThanOrEqualTo(0);
+
+        RuleFor(x => x.SetRestSeconds)
             .GreaterThanOrEqualTo(0);
 
         RuleFor(x => x.CountdownSeconds)

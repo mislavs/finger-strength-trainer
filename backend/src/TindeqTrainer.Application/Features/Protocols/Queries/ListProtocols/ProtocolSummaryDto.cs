@@ -4,6 +4,7 @@ public record ProtocolSummaryDto(
     Guid Id,
     string Name,
     double WeightPercentage,
-    int SetsPerHand,
+    int RepsPerSet,
+    int NumberOfSets,
     double WorkSeconds,
     bool IsDefault);

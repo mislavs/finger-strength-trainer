@@ -11,6 +11,20 @@ const apiProxyTarget =
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    "import.meta.env.OTEL_EXPORTER_OTLP_ENDPOINT": JSON.stringify(
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "",
+    ),
+    "import.meta.env.OTEL_EXPORTER_OTLP_HEADERS": JSON.stringify(
+      process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "",
+    ),
+    "import.meta.env.OTEL_RESOURCE_ATTRIBUTES": JSON.stringify(
+      process.env.OTEL_RESOURCE_ATTRIBUTES ?? "",
+    ),
+    "import.meta.env.OTEL_SERVICE_NAME": JSON.stringify(
+      process.env.OTEL_SERVICE_NAME ?? "",
+    ),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

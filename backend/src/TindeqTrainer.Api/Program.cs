@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
 using TindeqTrainer.Api.Endpoints;
+using TindeqTrainer.Api.ExceptionHandlers;
 using TindeqTrainer.Api.Hubs;
-using TindeqTrainer.Api.Middleware;
 using TindeqTrainer.Api.Services;
 using TindeqTrainer.Application;
 using TindeqTrainer.Application.Services;
 using TindeqTrainer.Infrastructure;
 using TindeqTrainer.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -41,6 +42,8 @@ try
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
     builder.Services.AddSingleton<ILiveStreamNotifier, SignalRLiveStreamNotifier>();
     builder.Services.AddCors(options =>
     {
@@ -59,13 +62,13 @@ try
         app.UseCors("Frontend");
     }
 
-    using (var scope = app.Services.CreateScope())
+    await using (var scope = app.Services.CreateAsyncScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.Database.EnsureCreated();
+        await dbContext.Database.MigrateAsync();
     }
 
-    app.UseMiddleware<ExceptionHandlerMiddleware>();
+    app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
     app.UseHttpsRedirection();
 

@@ -78,16 +78,31 @@ public class UpdateProtocolValidatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Validate_WhenSetsPerHandIsNotPositive_ShouldHaveErrorForSetsPerHand(int value)
+    public void Validate_WhenRepsPerSetIsNotPositive_ShouldHaveErrorForRepsPerSet(int value)
     {
         // Arrange
-        var command = CreateValidCommand() with { SetsPerHand = value };
+        var command = CreateValidCommand() with { RepsPerSet = value };
 
         // Act
         var result = _sut.TestValidate(command);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.SetsPerHand);
+        result.ShouldHaveValidationErrorFor(x => x.RepsPerSet);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Validate_WhenNumberOfSetsIsNotPositive_ShouldHaveErrorForNumberOfSets(int value)
+    {
+        // Arrange
+        var command = CreateValidCommand() with { NumberOfSets = value };
+
+        // Act
+        var result = _sut.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.NumberOfSets);
     }
 
     [Theory]
@@ -109,6 +124,7 @@ public class UpdateProtocolValidatorTests
     [InlineData("MaxWeightKg")]
     [InlineData("RestSeconds")]
     [InlineData("HandSwitchSeconds")]
+    [InlineData("SetRestSeconds")]
     [InlineData("CountdownSeconds")]
     public void Validate_WhenNumericFieldIsNegative_ShouldHaveError(string fieldName)
     {
@@ -118,6 +134,7 @@ public class UpdateProtocolValidatorTests
             nameof(UpdateProtocolCommand.MaxWeightKg) => CreateValidCommand() with { MaxWeightKg = -1 },
             nameof(UpdateProtocolCommand.RestSeconds) => CreateValidCommand() with { RestSeconds = -1 },
             nameof(UpdateProtocolCommand.HandSwitchSeconds) => CreateValidCommand() with { HandSwitchSeconds = -1 },
+            nameof(UpdateProtocolCommand.SetRestSeconds) => CreateValidCommand() with { SetRestSeconds = -1 },
             nameof(UpdateProtocolCommand.CountdownSeconds) => CreateValidCommand() with { CountdownSeconds = -1 },
             _ => throw new ArgumentOutOfRangeException(nameof(fieldName), fieldName, "Unsupported field.")
         };
@@ -136,10 +153,12 @@ public class UpdateProtocolValidatorTests
             Name: "Protocol A",
             MaxWeightKg: 40,
             WeightPercentage: 80,
-            SetsPerHand: 6,
+            RepsPerSet: 6,
+            NumberOfSets: 1,
             WorkSeconds: 7,
             RestSeconds: 3,
             HandSwitchSeconds: 30,
+            SetRestSeconds: 0,
             CountdownSeconds: 5,
             AudioCues: true,
             CountdownBeeps: true);

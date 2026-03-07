@@ -17,10 +17,12 @@ public class DeleteProtocolHandlerTests(IntegrationTestFactory factory) : Integr
             name: "To Delete",
             maxWeightKg: 35,
             weightPercentage: 65,
-            setsPerHand: 6,
+            repsPerSet: 6,
+            numberOfSets: 1,
             workSeconds: 7,
             restSeconds: 3,
             handSwitchSeconds: 30,
+            setRestSeconds: 0,
             countdownSeconds: 5,
             audioCues: false,
             countdownBeeps: false);

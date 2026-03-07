@@ -9,13 +9,25 @@ export interface CreateProtocolRequest {
   name?: string | null;
   maxWeightKg?: number;
   weightPercentage?: number;
-  setsPerHand?: number;
+  repsPerSet?: number;
+  numberOfSets?: number;
   workSeconds?: number;
   restSeconds?: number;
   handSwitchSeconds?: number;
+  setRestSeconds?: number;
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
+}
+
+export interface DeviceStatusDto {
+  isConnected?: boolean;
+  /** @nullable */
+  deviceName?: string | null;
+  /** @nullable */
+  batteryVoltage?: number | null;
+  /** @nullable */
+  firmwareVersion?: string | null;
 }
 
 export interface ProtocolDto {
@@ -24,10 +36,12 @@ export interface ProtocolDto {
   name?: string | null;
   maxWeightKg?: number;
   weightPercentage?: number;
-  setsPerHand?: number;
+  repsPerSet?: number;
+  numberOfSets?: number;
   workSeconds?: number;
   restSeconds?: number;
   handSwitchSeconds?: number;
+  setRestSeconds?: number;
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
@@ -40,9 +54,47 @@ export interface ProtocolSummaryDto {
   /** @nullable */
   name?: string | null;
   weightPercentage?: number;
-  setsPerHand?: number;
+  repsPerSet?: number;
+  numberOfSets?: number;
   workSeconds?: number;
   isDefault?: boolean;
+}
+
+export interface SessionSampleDto {
+  /** @nullable */
+  hand?: string | null;
+  /** @nullable */
+  setNumber?: number | null;
+  weightKg?: number;
+  timestampSeconds?: number;
+}
+
+export interface SessionDetailDto {
+  id?: string;
+  date?: string;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  protocolName?: string | null;
+  isComplete?: boolean;
+  peakForceKg?: number;
+  avgForceKg?: number;
+  durationSeconds?: number;
+  /** @nullable */
+  samples?: SessionSampleDto[] | null;
+}
+
+export interface SessionSummaryDto {
+  id?: string;
+  date?: string;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  protocolName?: string | null;
+  isComplete?: boolean;
+  peakForceKg?: number;
+  avgForceKg?: number;
+  durationSeconds?: number;
 }
 
 export interface UpdateProtocolRequest {
@@ -50,10 +102,12 @@ export interface UpdateProtocolRequest {
   name?: string | null;
   maxWeightKg?: number;
   weightPercentage?: number;
-  setsPerHand?: number;
+  repsPerSet?: number;
+  numberOfSets?: number;
   workSeconds?: number;
   restSeconds?: number;
   handSwitchSeconds?: number;
+  setRestSeconds?: number;
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;

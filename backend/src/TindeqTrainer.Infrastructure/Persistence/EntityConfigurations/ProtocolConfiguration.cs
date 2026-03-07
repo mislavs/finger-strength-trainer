@@ -20,7 +20,10 @@ public class ProtocolConfiguration : IEntityTypeConfiguration<Protocol>
         builder.Property(p => p.WeightPercentage)
             .IsRequired();
 
-        builder.Property(p => p.SetsPerHand)
+        builder.Property(p => p.RepsPerSet)
+            .IsRequired();
+
+        builder.Property(p => p.NumberOfSets)
             .IsRequired();
 
         builder.Property(p => p.WorkSeconds)
@@ -30,6 +33,9 @@ public class ProtocolConfiguration : IEntityTypeConfiguration<Protocol>
             .IsRequired();
 
         builder.Property(p => p.HandSwitchSeconds)
+            .IsRequired();
+
+        builder.Property(p => p.SetRestSeconds)
             .IsRequired();
 
         builder.Property(p => p.CountdownSeconds)

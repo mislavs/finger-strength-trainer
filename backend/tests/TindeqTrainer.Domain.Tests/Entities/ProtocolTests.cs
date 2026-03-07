@@ -13,10 +13,12 @@ public class ProtocolTests
             name: "Endurance 60%",
             maxWeightKg: 40,
             weightPercentage: 60,
-            setsPerHand: 10,
+            repsPerSet: 10,
+            numberOfSets: 1,
             workSeconds: 7,
             restSeconds: 3,
             handSwitchSeconds: 30,
+            setRestSeconds: 0,
             countdownSeconds: 5,
             audioCues: true,
             countdownBeeps: true);
@@ -39,10 +41,12 @@ public class ProtocolTests
             name: "Short Power 90%",
             maxWeightKg: 50,
             weightPercentage: 90,
-            setsPerHand: 4,
+            repsPerSet: 4,
+            numberOfSets: 3,
             workSeconds: 5,
             restSeconds: 5,
             handSwitchSeconds: 30,
+            setRestSeconds: 240,
             countdownSeconds: 3,
             audioCues: true,
             countdownBeeps: false,
@@ -54,10 +58,12 @@ public class ProtocolTests
         protocol.Name.Should().Be("Short Power 90%");
         protocol.MaxWeightKg.Should().Be(50);
         protocol.WeightPercentage.Should().Be(90);
-        protocol.SetsPerHand.Should().Be(4);
+        protocol.RepsPerSet.Should().Be(4);
+        protocol.NumberOfSets.Should().Be(3);
         protocol.WorkSeconds.Should().Be(5);
         protocol.RestSeconds.Should().Be(5);
         protocol.HandSwitchSeconds.Should().Be(30);
+        protocol.SetRestSeconds.Should().Be(240);
         protocol.CountdownSeconds.Should().Be(3);
         protocol.AudioCues.Should().BeTrue();
         protocol.CountdownBeeps.Should().BeFalse();
@@ -74,10 +80,12 @@ public class ProtocolTests
             name: "Bounds Test",
             maxWeightKg: 40,
             weightPercentage: percentage,
-            setsPerHand: 6,
+            repsPerSet: 6,
+            numberOfSets: 1,
             workSeconds: 7,
             restSeconds: 3,
             handSwitchSeconds: 30,
+            setRestSeconds: 0,
             countdownSeconds: 5,
             audioCues: false,
             countdownBeeps: false);

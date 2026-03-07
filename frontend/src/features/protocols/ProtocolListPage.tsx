@@ -59,6 +59,7 @@ export function ProtocolListPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Weight %</TableHead>
+                  <TableHead>Reps / Set</TableHead>
                   <TableHead>Sets</TableHead>
                   <TableHead>Work (s)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -75,7 +76,8 @@ export function ProtocolListPage() {
                         </div>
                       </TableCell>
                       <TableCell>{protocol.weightPercentage}</TableCell>
-                      <TableCell>{protocol.setsPerHand}</TableCell>
+                      <TableCell>{protocol.repsPerSet}</TableCell>
+                      <TableCell>{protocol.numberOfSets}</TableCell>
                       <TableCell>{protocol.workSeconds}</TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
@@ -101,7 +103,7 @@ export function ProtocolListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       No protocols found.
                     </TableCell>
                   </TableRow>
