@@ -1,15 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
+import { ApiClientError } from "@/lib/api-client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useProtocol, useProtocols } from "@/features/protocols/hooks";
-import type { Protocol } from "@/features/protocols/models";
+import { DeleteProtocolDialog } from "@/features/protocols/DeleteProtocolDialog";
+import { useProtocol, useProtocols, useUpdateProtocol } from "@/features/protocols/hooks";
+import { protocolFieldNames, toProtocolInput, type Protocol, type ProtocolInput, type ProtocolSummary } from "@/features/protocols/models";
+import { protocolSchema, type ProtocolFormValues } from "@/features/protocols/schema";
 import { TimerDisplay } from "@/features/repeater/TimerDisplay";
 import { TimerPhase, type TimerHand, type TimerProtocol } from "@/features/repeater/models";
 import { useTimer } from "@/features/repeater/useTimer";
 import { appRoutes } from "@/lib/app-routes";
+
+const secondsPerMinute = 60;
 
 function toTimerProtocol(protocol: Protocol): TimerProtocol {
   return {
@@ -27,17 +39,47 @@ function formatSeconds(seconds: number): string {
   return Number.isInteger(seconds) ? seconds.toFixed(0) : seconds.toFixed(1);
 }
 
-function formatMinutes(seconds: number): string {
-  const minutes = seconds / 60;
-  return Number.isInteger(minutes) ? minutes.toFixed(0) : minutes.toFixed(1);
+function getErrorMessage(message: unknown): string | undefined {
+  return typeof message === "string" ? message : undefined;
 }
 
 export function RepeaterPage() {
   const protocolsQuery = useProtocols();
+  const updateProtocol = useUpdateProtocol();
   const [selectedProtocolId, setSelectedProtocolId] = useState("");
+  const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null);
   const [startingHand, setStartingHand] = useState<TimerHand>("left");
   const timer = useTimer();
-  const effectiveSelectedProtocolId = selectedProtocolId || protocolsQuery.data?.[0]?.id || "";
+  const form = useForm<ProtocolFormValues>({
+    resolver: zodResolver(protocolSchema),
+    defaultValues: {
+      name: "",
+      maxWeightKg: 0,
+      weightPercentage: 0,
+      repsPerSet: 1,
+      numberOfSets: 1,
+      workSeconds: 0,
+      restSeconds: 0,
+      handSwitchSeconds: 0,
+      setRestSeconds: 0,
+      countdownSeconds: 0,
+      audioCues: true,
+      countdownBeeps: true,
+    },
+  });
+  const effectiveSelectedProtocolId = useMemo(() => {
+    const protocols = protocolsQuery.data ?? [];
+
+    if (!protocols.length) {
+      return "";
+    }
+
+    if (selectedProtocolId && protocols.some((protocol) => protocol.id === selectedProtocolId)) {
+      return selectedProtocolId;
+    }
+
+    return protocols[0].id;
+  }, [protocolsQuery.data, selectedProtocolId]);
 
   const selectedProtocolQuery = useProtocol(effectiveSelectedProtocolId);
   const selectedProtocol = selectedProtocolQuery.data;
@@ -47,25 +89,87 @@ export function RepeaterPage() {
   const isPaused = timer.state.phase === TimerPhase.Paused;
   const isSessionRunning = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
   const isSessionComplete = timer.state.phase === TimerPhase.Done;
+  const isSavingProtocol = updateProtocol.isPending;
 
   const selectedProtocolSummary = useMemo(
     () => protocolsQuery.data?.find((protocol) => protocol.id === effectiveSelectedProtocolId) ?? null,
     [effectiveSelectedProtocolId, protocolsQuery.data],
   );
+  const hasProtocols = Boolean(protocolsQuery.data?.length);
+
+  const closeDeleteDialog = () => setProtocolToDelete(null);
+  const handleDeleteDialogChange = (open: boolean) => {
+    if (!open) {
+      closeDeleteDialog();
+    }
+  };
+  const canStartTimer =
+    Boolean(timerProtocol) &&
+    !selectedProtocolQuery.isLoading &&
+    !form.formState.isDirty &&
+    !isSavingProtocol;
+
+  useEffect(() => {
+    if (!selectedProtocol) {
+      return;
+    }
+
+    form.reset(toProtocolInput(selectedProtocol));
+  }, [form, selectedProtocol]);
+
+  async function handleProtocolSave(values: ProtocolFormValues): Promise<void> {
+    if (!selectedProtocol) {
+      return;
+    }
+
+    const request: ProtocolInput = {
+      ...toProtocolInput(selectedProtocol),
+      ...values,
+      setRestSeconds: values.setRestSeconds * secondsPerMinute,
+    };
+
+    try {
+      await updateProtocol.mutateAsync({ id: selectedProtocol.id, data: request });
+      form.reset({
+        ...values,
+        setRestSeconds: values.setRestSeconds,
+      });
+    } catch (error) {
+      if (!(error instanceof ApiClientError)) {
+        toast.error("Failed to save protocol.");
+        return;
+      }
+
+      if (error.errors) {
+        for (const [fieldName, messages] of Object.entries(error.errors)) {
+          if (!protocolFieldNames.includes(fieldName as keyof ProtocolInput)) {
+            continue;
+          }
+
+          form.setError(fieldName as keyof ProtocolFormValues, {
+            type: "server",
+            message: messages[0],
+          });
+        }
+      }
+
+      toast.error(error.message);
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Repeater</h1>
+          <h1 className="text-2xl font-semibold">Repeaters</h1>
           <p className="text-sm text-muted-foreground">
-            Frontend timer workflow for structured repeater training. BLE integration arrives in the next step.
+            Set up repeater sessions and manage the protocols they run with from one page.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {canConfigure ? (
-            <Button onClick={() => timerProtocol && timer.start(timerProtocol, startingHand)} disabled={!timerProtocol || selectedProtocolQuery.isLoading}>
+            <Button onClick={() => timerProtocol && timer.start(timerProtocol, startingHand)} disabled={!canStartTimer}>
               Start Timer
             </Button>
           ) : null}
@@ -96,49 +200,77 @@ export function RepeaterPage() {
         </div>
       </div>
 
-      {!protocolsQuery.isLoading && !protocolsQuery.data?.length ? (
+      {!protocolsQuery.isLoading && !hasProtocols ? (
         <Card>
           <CardHeader>
             <CardTitle>No protocols yet</CardTitle>
-            <CardDescription>Create a protocol before starting a repeater timer.</CardDescription>
+            <CardDescription>Create your first protocol to configure a repeater session.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to={appRoutes.protocolsNew}>Create Protocol</Link>
+              <Link to={appRoutes.protocolsNew}>
+                <Plus className="size-4" />
+                New Protocol
+              </Link>
             </Button>
           </CardContent>
         </Card>
       ) : null}
 
-      {!hasSessionStarted ? (
+      {!hasSessionStarted && (protocolsQuery.isLoading || hasProtocols) ? (
         <>
           <Card>
             <CardHeader>
               <CardTitle>Session Setup</CardTitle>
               <CardDescription>Choose a protocol and the hand you want to start with.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="protocol-select">
-                  Protocol
-                </label>
-                {protocolsQuery.isLoading ? (
-                  <Skeleton className="h-10 w-full" />
-                ) : (
-                  <select
-                    id="protocol-select"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={effectiveSelectedProtocolId}
-                    onChange={(event) => setSelectedProtocolId(event.target.value)}
-                    disabled={!canConfigure}
+            <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium" htmlFor="protocol-select">
+                      Protocol
+                    </label>
+                    {selectedProtocolSummary?.isDefault ? <Badge variant="secondary">Default</Badge> : null}
+                  </div>
+
+                  {protocolsQuery.isLoading ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <select
+                      id="protocol-select"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={effectiveSelectedProtocolId}
+                      onChange={(event) => setSelectedProtocolId(event.target.value)}
+                      disabled={!canConfigure}
+                    >
+                      {protocolsQuery.data?.map((protocol) => (
+                        <option key={protocol.id} value={protocol.id}>
+                          {protocol.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild type="button" variant="outline" size="sm">
+                    <Link to={appRoutes.protocolsNew}>
+                      <Plus className="size-4" />
+                      New Protocol
+                    </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={!selectedProtocolSummary || selectedProtocolSummary.isDefault}
+                    onClick={() => selectedProtocolSummary && setProtocolToDelete(selectedProtocolSummary)}
                   >
-                    {protocolsQuery.data?.map((protocol) => (
-                      <option key={protocol.id} value={protocol.id}>
-                        {protocol.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -169,6 +301,12 @@ export function RepeaterPage() {
             <Skeleton className="h-52 w-full" />
           ) : null}
 
+          {protocolsQuery.isError ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              Failed to load protocols. Please try again.
+            </p>
+          ) : null}
+
           {selectedProtocolQuery.isError ? (
             <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               Failed to load the selected protocol.
@@ -178,36 +316,145 @@ export function RepeaterPage() {
           {selectedProtocol ? (
             <Card>
               <CardHeader>
-                <CardTitle>{selectedProtocolSummary?.name ?? selectedProtocol.name}</CardTitle>
-                <CardDescription>Protocol timing and set structure used by the timer machine.</CardDescription>
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle>{selectedProtocolSummary?.name ?? selectedProtocol.name}</CardTitle>
+                  {selectedProtocolSummary?.isDefault ? <Badge variant="secondary">Default</Badge> : null}
+                </div>
+                <CardDescription>Edit the selected protocol inline. Save changes before starting the timer.</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-md border p-3">
-                  <p className="text-sm text-muted-foreground">Reps / Set</p>
-                  <p className="text-xl font-semibold">{selectedProtocol.repsPerSet}</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-sm text-muted-foreground">Number of Sets</p>
-                  <p className="text-xl font-semibold">{selectedProtocol.numberOfSets}</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-sm text-muted-foreground">Work / Rest</p>
-                  <p className="text-xl font-semibold">
-                    {formatSeconds(selectedProtocol.workSeconds)}s / {formatSeconds(selectedProtocol.restSeconds)}s
-                  </p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-sm text-muted-foreground">Hand Switch</p>
-                  <p className="text-xl font-semibold">{formatSeconds(selectedProtocol.handSwitchSeconds)}s</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-sm text-muted-foreground">Set Rest</p>
-                  <p className="text-xl font-semibold">{formatMinutes(selectedProtocol.setRestSeconds)} min</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-sm text-muted-foreground">Countdown</p>
-                  <p className="text-xl font-semibold">{formatSeconds(selectedProtocol.countdownSeconds)}s</p>
-                </div>
+              <CardContent>
+                <form className="space-y-4" onSubmit={form.handleSubmit(handleProtocolSave)}>
+                  <div className="space-y-2">
+                    <Label htmlFor="protocol-name">Name</Label>
+                    <Input
+                      id="protocol-name"
+                      disabled={!canConfigure || isSavingProtocol}
+                      {...form.register("name")}
+                    />
+                    {getErrorMessage(form.formState.errors.name?.message) ? (
+                      <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.name?.message)}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label htmlFor="repsPerSet">Reps / Set</Label>
+                      <Input
+                        id="repsPerSet"
+                        type="number"
+                        step="1"
+                        disabled={!canConfigure || isSavingProtocol}
+                        {...form.register("repsPerSet", { valueAsNumber: true })}
+                      />
+                      {getErrorMessage(form.formState.errors.repsPerSet?.message) ? (
+                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.repsPerSet?.message)}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label htmlFor="numberOfSets">Number of Sets</Label>
+                      <Input
+                        id="numberOfSets"
+                        type="number"
+                        step="1"
+                        disabled={!canConfigure || isSavingProtocol}
+                        {...form.register("numberOfSets", { valueAsNumber: true })}
+                      />
+                      {getErrorMessage(form.formState.errors.numberOfSets?.message) ? (
+                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.numberOfSets?.message)}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label htmlFor="workSeconds">Work / Rest</Label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Input
+                          id="workSeconds"
+                          type="number"
+                          step="0.1"
+                          disabled={!canConfigure || isSavingProtocol}
+                          {...form.register("workSeconds", { valueAsNumber: true })}
+                        />
+                        <Input
+                          id="restSeconds"
+                          type="number"
+                          step="0.1"
+                          disabled={!canConfigure || isSavingProtocol}
+                          {...form.register("restSeconds", { valueAsNumber: true })}
+                        />
+                      </div>
+                      {(getErrorMessage(form.formState.errors.workSeconds?.message) || getErrorMessage(form.formState.errors.restSeconds?.message)) ? (
+                        <p className="text-sm text-destructive">
+                          {getErrorMessage(form.formState.errors.workSeconds?.message) ?? getErrorMessage(form.formState.errors.restSeconds?.message)}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label htmlFor="handSwitchSeconds">Hand Switch</Label>
+                      <Input
+                        id="handSwitchSeconds"
+                        type="number"
+                        step="0.1"
+                        disabled={!canConfigure || isSavingProtocol}
+                        {...form.register("handSwitchSeconds", { valueAsNumber: true })}
+                      />
+                      {getErrorMessage(form.formState.errors.handSwitchSeconds?.message) ? (
+                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.handSwitchSeconds?.message)}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label htmlFor="setRestSeconds">Set Rest (min)</Label>
+                      <Input
+                        id="setRestSeconds"
+                        type="number"
+                        step="0.5"
+                        disabled={!canConfigure || isSavingProtocol}
+                        {...form.register("setRestSeconds", { valueAsNumber: true })}
+                      />
+                      {getErrorMessage(form.formState.errors.setRestSeconds?.message) ? (
+                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.setRestSeconds?.message)}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label htmlFor="countdownSeconds">Countdown</Label>
+                      <Input
+                        id="countdownSeconds"
+                        type="number"
+                        step="0.1"
+                        disabled={!canConfigure || isSavingProtocol}
+                        {...form.register("countdownSeconds", { valueAsNumber: true })}
+                      />
+                      {getErrorMessage(form.formState.errors.countdownSeconds?.message) ? (
+                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.countdownSeconds?.message)}</p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {form.formState.isDirty
+                        ? "You have unsaved protocol changes."
+                        : `Current work/rest: ${formatSeconds(selectedProtocol.workSeconds)}s / ${formatSeconds(selectedProtocol.restSeconds)}s`}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!form.formState.isDirty || isSavingProtocol}
+                        onClick={() => form.reset(toProtocolInput(selectedProtocol))}
+                      >
+                        Reset
+                      </Button>
+                      <Button type="submit" disabled={!canConfigure || !form.formState.isDirty || isSavingProtocol}>
+                        {isSavingProtocol ? <Loader2 className="size-4 animate-spin" /> : null}
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           ) : null}
@@ -233,6 +480,8 @@ export function RepeaterPage() {
           Repeater timer complete.
         </p>
       ) : null}
+
+      <DeleteProtocolDialog protocol={protocolToDelete} open={Boolean(protocolToDelete)} onOpenChange={handleDeleteDialogChange} />
     </div>
   );
 }

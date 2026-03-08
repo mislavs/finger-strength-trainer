@@ -5,7 +5,6 @@ import { HistoryPage } from "@/features/history/HistoryPage";
 import { SessionDetailPage } from "@/features/history/SessionDetailPage";
 import { LiveStreamPage } from "@/features/live-stream/LiveStreamPage";
 import { ProtocolFormPage } from "@/features/protocols/ProtocolFormPage";
-import { ProtocolListPage } from "@/features/protocols/ProtocolListPage";
 import { RepeaterPage } from "@/features/repeater/RepeaterPage";
 import { appRoutes } from "@/lib/app-routes";
 
@@ -13,15 +12,14 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index element={<Navigate to={appRoutes.protocols} replace />} />
-        <Route path={appRoutes.protocols.slice(1)} element={<ProtocolListPage />} />
+        <Route index element={<Navigate to={appRoutes.repeaters} replace />} />
         <Route path={appRoutes.protocolsNew.slice(1)} element={<ProtocolFormPage />} />
         <Route path={appRoutes.protocolsEdit.slice(1)} element={<ProtocolFormPage />} />
         <Route path={appRoutes.liveStream.slice(1)} element={<LiveStreamPage />} />
-        <Route path={appRoutes.repeater.slice(1)} element={<RepeaterPage />} />
+        <Route path={appRoutes.repeaters.slice(1)} element={<RepeaterPage />} />
         <Route path={appRoutes.history.slice(1)} element={<HistoryPage />} />
         <Route path={appRoutes.historyDetail.slice(1)} element={<SessionDetailPage />} />
-        <Route path="*" element={<Navigate to={appRoutes.protocols} replace />} />
+        <Route path="*" element={<Navigate to={appRoutes.repeaters} replace />} />
       </Route>
     </Routes>
   );

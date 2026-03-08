@@ -52,7 +52,7 @@ export function ProtocolFormPage() {
         await createProtocol.mutateAsync(request);
       }
 
-      navigate(appRoutes.protocols);
+      navigate(appRoutes.repeaters);
     } catch (error) {
       if (!(error instanceof ApiClientError)) {
         toast.error("Failed to save protocol.");
@@ -99,7 +99,7 @@ export function ProtocolFormPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{isEditMode ? "Edit protocol" : "New protocol"}</h1>
         <Button asChild variant="outline">
-          <Link to={appRoutes.protocols}>Back to list</Link>
+          <Link to={appRoutes.repeaters}>Back to repeaters</Link>
         </Button>
       </div>
 
@@ -114,7 +114,7 @@ export function ProtocolFormPage() {
               targetWeight={targetWeight}
               isSubmitting={isSubmitting}
               isEditMode={isEditMode}
-              onCancel={() => navigate(appRoutes.protocols)}
+              onCancel={() => navigate(appRoutes.repeaters)}
             />
           </form>
         </CardContent>

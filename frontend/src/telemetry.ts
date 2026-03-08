@@ -80,7 +80,7 @@ function resolveUrlDetails(url: string, method = "GET") {
 }
 
 export function initializeTelemetry(
-  otlpEndpoint: string,
+  otlpEndpoint = "",
   headers = "",
   resourceAttributes = "",
   serviceName = "",
