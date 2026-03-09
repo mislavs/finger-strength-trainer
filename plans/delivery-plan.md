@@ -234,7 +234,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 7: Repeater Training (Full Vertical Slice)
+## Step 7: Repeater Training (Full Vertical Slice) (DONE)
 
 - **Goal:** Deliver the core training feature -- connecting the frontend timer to BLE measurement and session persistence for structured repeater sessions with real-time force feedback.
 - **Scope:**
@@ -278,18 +278,14 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 8: Audio, Themes, and Connection Resilience
+## Step 8: Audio and Connection Resilience
 
-- **Goal:** Add audio cues, light/dark theme toggle, and BLE reconnection handling to complete the product.
+- **Goal:** Add audio cues and BLE reconnection handling to complete the product.
 - **Scope:**
   - **Audio cues** (frontend-driven -- timer callbacks trigger audio directly in the browser):
     - Sounds: "beep" (countdown tick), "go" (work start), "rest" (rest start), "done" (session complete)
     - Protocol `AudioCues` and `CountdownBeeps` flags control which sounds play
     - No backend involvement -- audio is a pure frontend concern
-  - **Theme toggle:**
-    - `darkMode: 'class'` on `<html>`, default to OS preference
-    - `ThemeToggle` component in nav bar
-    - Persist preference in localStorage
   - **BLE reconnection:**
     - Backend detects disconnect via `ConnectionStatusChanged`, notifies frontend (`ConnectionLost` SignalR event)
     - Frontend pauses its own timer on `ConnectionLost`
@@ -304,9 +300,9 @@ frontend/                              React SPA (Vite + TypeScript)
 - **Tests:**
   - Unit tests for reconnection retry logic (backend)
   - Vitest tests for audio cue trigger conditions (respect protocol flags)
-  - Manual testing: theme toggle, audio playback
-- **Verification:** `dotnet build`, `dotnet test`, `npm run build`, `npm test`; launch app, toggle theme, verify audio plays on transitions, simulate BLE disconnect during training
-- **Exit Criteria:** All PRD features implemented; app handles BLE disconnection gracefully; audio and theme preferences work correctly
+  - Manual testing: audio playback
+- **Verification:** `dotnet build`, `dotnet test`, `npm run build`, `npm test`; launch app, verify audio plays on transitions, simulate BLE disconnect during training
+- **Exit Criteria:** All PRD features implemented; app handles BLE disconnection gracefully; audio cues work correctly
 
 ---
 
@@ -330,5 +326,4 @@ frontend/                              React SPA (Vite + TypeScript)
 - [ ] Session History: browse, drill into detail, export CSV, delete
 - [ ] Protocol Management: create, edit, delete protocols; defaults present
 - [ ] Audio cues play on transitions (respecting protocol flags)
-- [ ] Light/dark theme toggle works
 - [ ] BLE reconnection works during training
