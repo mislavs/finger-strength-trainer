@@ -54,7 +54,7 @@ export function ProtocolNumberField({
   const errorMessage = getProtocolFieldErrorMessage(form.formState.errors[field.name]?.message);
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-1.5", className)}>
       <Label htmlFor={field.name}>{label ?? field.label}</Label>
       <Input
         id={field.name}

@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  protocolNumericFields,
-  type NumericFieldDefinition,
-} from "@/features/protocols/protocol-form.constants";
+import { protocolNumericFields } from "@/features/protocols/protocol-form.constants";
 import {
   ProtocolFieldError,
   ProtocolNumberField,
@@ -16,8 +13,11 @@ import {
 import type { ProtocolFormValues } from "@/features/protocols/schema";
 import { cn } from "@/lib/utils";
 
-const outerFlowLayoutClassName = "grid gap-3 xl:grid-cols-[minmax(12rem,14rem)_auto_minmax(0,1fr)] xl:items-stretch";
-const setStagesLayoutClassName = "grid min-w-0 gap-3 xl:grid-cols-[minmax(12rem,1.45fr)_auto_minmax(9rem,1fr)_auto_minmax(9rem,1fr)]";
+const flowGridClassName = [
+  "grid gap-2",
+  "xl:grid-cols-[minmax(10rem,1fr)_auto_minmax(0,2.5fr)_auto_minmax(10rem,1fr)_auto_minmax(10rem,1fr)]",
+  "xl:items-stretch",
+].join(" ");
 
 function toFiniteNumber(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -34,89 +34,78 @@ function formatSeconds(value: number): string {
 }
 
 interface StageCardProps {
+  step: number
+  label: string
   children: ReactNode
   className?: string
 }
 
-function StageCard({ children, className }: StageCardProps) {
+function StageCard({ step, label, children, className }: StageCardProps) {
   return (
-    <div className={cn("min-w-0 rounded-2xl border bg-card p-4 shadow-sm", className)}>
-      <div className="space-y-3">{children}</div>
+    <div className={cn("flex min-w-0 flex-col rounded-xl border bg-card p-4", className)}>
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+          {step}
+        </span>
+        <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      </div>
+      <div className="flex flex-1 flex-col justify-center gap-3">{children}</div>
     </div>
   );
 }
 
 function FlowConnector() {
   return (
-    <div className="hidden items-center justify-center xl:flex">
-      <div className="flex items-center gap-1 text-muted-foreground">
-        <div className="h-px w-4 bg-border" />
-        <ArrowRight className="size-4" />
-        <div className="h-px w-4 bg-border" />
-      </div>
+    <div className="flex items-center justify-center">
+      <ChevronRight className="hidden size-4 text-muted-foreground/40 xl:block" />
+      <div className="h-3 w-px bg-border xl:hidden" />
     </div>
   );
 }
 
-interface SetHeaderProps {
+interface SetCountFieldProps {
   form: UseFormReturn<ProtocolFormValues>
   disabled?: boolean
 }
 
-function SetHeader({ form, disabled = false }: SetHeaderProps) {
-  const numberOfSetsField = protocolNumericFields.numberOfSets;
-  const setsErrorMessage = getProtocolFieldErrorMessage(form.formState.errors.numberOfSets?.message);
+function SetCountField({ form, disabled = false }: SetCountFieldProps) {
+  const field = protocolNumericFields.numberOfSets;
+  const errorMessage = getProtocolFieldErrorMessage(form.formState.errors.numberOfSets?.message);
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div>
       <div className="flex items-center gap-2">
-        <h3 className="font-medium">Set</h3>
-        <span className="text-sm text-muted-foreground">x</span>
-        <div className="w-24">
-          <Label htmlFor={numberOfSetsField.name} className="sr-only">
-            {numberOfSetsField.label}
+        <div className="w-16">
+          <Label htmlFor={field.name} className="sr-only">
+            {field.label}
           </Label>
           <Input
-            id={numberOfSetsField.name}
+            id={field.name}
             type="number"
-            step={numberOfSetsField.step}
+            step={field.step}
             disabled={disabled}
-            {...form.register(numberOfSetsField.name, { valueAsNumber: true })}
+            {...form.register(field.name, { valueAsNumber: true })}
           />
         </div>
+        <span className="text-sm text-muted-foreground">sets</span>
       </div>
-
-      <ProtocolFieldError message={setsErrorMessage} />
+      <ProtocolFieldError message={errorMessage} />
     </div>
   );
 }
 
-interface SingleStageFieldProps {
-  form: UseFormReturn<ProtocolFormValues>
-  field: NumericFieldDefinition
-  disabled?: boolean
-}
-
-function SingleStageField({ form, field, disabled = false }: SingleStageFieldProps) {
-  return (
-    <StageCard className="flex h-full items-center">
-      <ProtocolNumberField form={form} field={field} disabled={disabled} />
-    </StageCard>
-  );
-}
-
-interface SummaryCardProps {
+interface SummaryStatProps {
   label: string
   value: string
   detail: string
 }
 
-function SummaryCard({ label, value, detail }: SummaryCardProps) {
+function SummaryStat({ label, value, detail }: SummaryStatProps) {
   return (
-    <div className="rounded-xl border bg-muted/20 p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+    <div className="rounded-lg bg-muted/40 px-4 py-3">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
     </div>
   );
 }
@@ -153,7 +142,8 @@ export function ProtocolFlowFields({ form, disabled = false }: ProtocolFlowField
   const oneHandSeconds = (safeRepsPerSet * safeWorkSeconds) + (Math.max(safeRepsPerSet - 1, 0) * safeRestSeconds);
   const twoHandSeconds = (oneHandSeconds * 2) + safeHandSwitchSeconds;
   const totalWorkReps = safeNumberOfSets * safeRepsPerSet * 2;
-  const summaryCards = [
+
+  const stats = [
     {
       label: "Time on one hand",
       value: formatSeconds(oneHandSeconds),
@@ -167,48 +157,46 @@ export function ProtocolFlowFields({ form, disabled = false }: ProtocolFlowField
     {
       label: "Total work reps",
       value: totalWorkReps.toString(),
-      detail: `${safeNumberOfSets} sets x ${safeRepsPerSet} reps x 2 hands`,
+      detail: `${safeNumberOfSets} sets × ${safeRepsPerSet} reps × 2 hands`,
     },
   ];
 
   return (
     <section className="space-y-4">
-      <div className={outerFlowLayoutClassName}>
-        <SingleStageField form={form} field={protocolNumericFields.countdownSeconds} disabled={disabled} />
+      <div className={flowGridClassName}>
+        <StageCard step={1} label="Prep">
+          <ProtocolNumberField form={form} field={protocolNumericFields.countdownSeconds} disabled={disabled} />
+        </StageCard>
 
         <FlowConnector />
 
-        <div className="min-w-0 space-y-4 xl:col-start-3">
-          <div className="min-w-0 rounded-2xl border bg-card p-4 shadow-sm">
-            <div className="space-y-4">
-              <SetHeader form={form} disabled={disabled} />
+        <StageCard step={2} label="Work">
+          <SetCountField form={form} disabled={disabled} />
 
-              <div className={setStagesLayoutClassName}>
-                <StageCard>
-                  <div className="grid grid-cols-2 gap-3">
-                    <ProtocolNumberField form={form} field={protocolNumericFields.workSeconds} disabled={disabled} />
-                    <ProtocolNumberField form={form} field={protocolNumericFields.restSeconds} disabled={disabled} />
-                  </div>
-
-                  <ProtocolNumberField form={form} field={protocolNumericFields.repsPerSet} disabled={disabled} className="mb-0" />
-                </StageCard>
-
-                <FlowConnector />
-
-                <SingleStageField form={form} field={protocolNumericFields.handSwitchSeconds} disabled={disabled} />
-
-                <FlowConnector />
-
-                <SingleStageField form={form} field={protocolNumericFields.setRestSeconds} disabled={disabled} />
-              </div>
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ProtocolNumberField form={form} field={protocolNumericFields.workSeconds} disabled={disabled} label="Work (s)" />
+            <ProtocolNumberField form={form} field={protocolNumericFields.restSeconds} disabled={disabled} label="Rest (s)" />
           </div>
-        </div>
+
+          <ProtocolNumberField form={form} field={protocolNumericFields.repsPerSet} disabled={disabled} />
+        </StageCard>
+
+        <FlowConnector />
+
+        <StageCard step={3} label="Switch">
+          <ProtocolNumberField form={form} field={protocolNumericFields.handSwitchSeconds} disabled={disabled} />
+        </StageCard>
+
+        <FlowConnector />
+
+        <StageCard step={4} label="Rest">
+          <ProtocolNumberField form={form} field={protocolNumericFields.setRestSeconds} disabled={disabled} />
+        </StageCard>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        {summaryCards.map((card) => (
-          <SummaryCard key={card.label} label={card.label} value={card.value} detail={card.detail} />
+        {stats.map((stat) => (
+          <SummaryStat key={stat.label} label={stat.label} value={stat.value} detail={stat.detail} />
         ))}
       </div>
     </section>
