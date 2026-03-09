@@ -8,7 +8,7 @@ namespace TindeqTrainer.Application.Tests.Features.Protocols.Queries.ListProtoco
 public class ListProtocolsHandlerTests(IntegrationTestFactory factory) : IntegrationTest(factory)
 {
     [Fact]
-    public async Task Handle_WhenCalled_ReturnsProtocolsOrderedByNameIncludingDefaults()
+    public async Task Handle_WhenCalled_ReturnsProtocolsOrderedByName()
     {
         // Arrange
         var additionalProtocols = new[]
@@ -27,9 +27,11 @@ public class ListProtocolsHandlerTests(IntegrationTestFactory factory) : Integra
         // Assert
         result.Should().HaveCount(5);
         result.Select(x => x.Name).Should().BeInAscendingOrder();
-        result.Select(x => x.Name).Should().Contain("Max Repeaters 80%");
+        result.Select(x => x.Name).Should().Contain("Alpha Protocol");
         result.Select(x => x.Name).Should().Contain("Endurance 60%");
+        result.Select(x => x.Name).Should().Contain("Max Repeaters 80%");
         result.Select(x => x.Name).Should().Contain("Short Power 90%");
+        result.Select(x => x.Name).Should().Contain("Zulu Protocol");
         result.Single(x => x.Name == "Zulu Protocol").NumberOfSets.Should().Be(2);
     }
 }

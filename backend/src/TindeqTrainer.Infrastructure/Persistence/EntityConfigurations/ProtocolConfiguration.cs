@@ -46,8 +46,5 @@ public class ProtocolConfiguration : IEntityTypeConfiguration<Protocol>
 
         builder.Property(p => p.CountdownBeeps)
             .IsRequired();
-
-        builder.Property(p => p.IsDefault)
-            .IsRequired();
     }
 }

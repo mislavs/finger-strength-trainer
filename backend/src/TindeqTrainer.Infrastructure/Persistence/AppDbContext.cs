@@ -34,8 +34,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
                 SetRestSeconds = 0d,
                 CountdownSeconds = 5d,
                 AudioCues = true,
-                CountdownBeeps = true,
-                IsDefault = true
+                CountdownBeeps = true
             },
             new
             {
@@ -51,8 +50,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
                 SetRestSeconds = 0d,
                 CountdownSeconds = 5d,
                 AudioCues = true,
-                CountdownBeeps = true,
-                IsDefault = true
+                CountdownBeeps = true
             },
             new
             {
@@ -68,8 +66,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
                 SetRestSeconds = 0d,
                 CountdownSeconds = 5d,
                 AudioCues = true,
-                CountdownBeeps = true,
-                IsDefault = true
+                CountdownBeeps = true
             });
     }
 }

@@ -1,5 +1,5 @@
-import { createContext, createElement, useContext, useEffect, useMemo, type ReactNode } from "react";
-import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { createContext, createElement, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 
 interface SignalRConnection {
   connection: HubConnection
@@ -8,6 +8,8 @@ interface SignalRConnection {
 const SignalRContext = createContext<SignalRConnection | null>(null);
 
 export function SignalRProvider({ children }: { children: ReactNode }) {
+  const lifecycleIdRef = useRef(0);
+  const startPromiseRef = useRef<Promise<void> | null>(null);
   const connection = useMemo(
     () =>
       new HubConnectionBuilder()
@@ -19,10 +21,33 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    connection.start().catch(() => undefined);
+    const lifecycleId = ++lifecycleIdRef.current;
+
+    if (connection.state === HubConnectionState.Disconnected && startPromiseRef.current === null) {
+      startPromiseRef.current = connection.start()
+        .catch(() => undefined)
+        .finally(() => {
+          startPromiseRef.current = null;
+        });
+    }
 
     return () => {
-      void connection.stop();
+      const stopConnection = async () => {
+        const pendingStart = startPromiseRef.current;
+        if (pendingStart !== null) {
+          await pendingStart.catch(() => undefined);
+        }
+
+        if (lifecycleIdRef.current !== lifecycleId) {
+          return;
+        }
+
+        if (connection.state !== HubConnectionState.Disconnected) {
+          await connection.stop().catch(() => undefined);
+        }
+      };
+
+      void stopConnection();
     };
   }, [connection]);
 

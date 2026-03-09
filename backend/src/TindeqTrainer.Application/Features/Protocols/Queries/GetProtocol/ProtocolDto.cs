@@ -14,5 +14,4 @@ public record ProtocolDto(
     double CountdownSeconds,
     bool AudioCues,
     bool CountdownBeeps,
-    bool IsDefault,
     double TargetWeightKg);

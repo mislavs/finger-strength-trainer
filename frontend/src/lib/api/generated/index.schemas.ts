@@ -45,7 +45,6 @@ export interface ProtocolDto {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
-  isDefault?: boolean;
   targetWeightKg?: number;
 }
 
@@ -57,7 +56,6 @@ export interface ProtocolSummaryDto {
   repsPerSet?: number;
   numberOfSets?: number;
   workSeconds?: number;
-  isDefault?: boolean;
 }
 
 export interface SessionSampleDto {

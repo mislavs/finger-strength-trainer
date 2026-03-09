@@ -28,7 +28,6 @@ public class GetProtocolHandler(AppDbContext dbContext) : IRequestHandler<GetPro
                 x.CountdownSeconds,
                 x.AudioCues,
                 x.CountdownBeeps,
-                x.IsDefault,
                 x.TargetWeightKg))
             .FirstOrDefaultAsync(cancellationToken);
 

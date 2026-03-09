@@ -6,5 +6,4 @@ public record ProtocolSummaryDto(
     double WeightPercentage,
     int RepsPerSet,
     int NumberOfSets,
-    double WorkSeconds,
-    bool IsDefault);
+    double WorkSeconds);

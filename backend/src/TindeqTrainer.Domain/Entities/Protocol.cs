@@ -32,8 +32,6 @@ public class Protocol
 
     public bool CountdownBeeps { get; private set; }
 
-    public bool IsDefault { get; private set; }
-
     public double TargetWeightKg => MaxWeightKg * (WeightPercentage / 100.0);
 
     public static Protocol Create(
@@ -49,7 +47,6 @@ public class Protocol
         double countdownSeconds,
         bool audioCues,
         bool countdownBeeps,
-        bool isDefault = false,
         Guid? id = null)
     {
         var normalizedName = ValidateAndNormalize(
@@ -78,8 +75,7 @@ public class Protocol
             SetRestSeconds = setRestSeconds,
             CountdownSeconds = countdownSeconds,
             AudioCues = audioCues,
-            CountdownBeeps = countdownBeeps,
-            IsDefault = isDefault
+            CountdownBeeps = countdownBeeps
         };
     }
 

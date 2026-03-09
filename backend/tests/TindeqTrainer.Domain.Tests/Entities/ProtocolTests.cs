@@ -50,7 +50,6 @@ public class ProtocolTests
             countdownSeconds: 3,
             audioCues: true,
             countdownBeeps: false,
-            isDefault: true,
             id: id);
 
         // Assert
@@ -67,7 +66,6 @@ public class ProtocolTests
         protocol.CountdownSeconds.Should().Be(3);
         protocol.AudioCues.Should().BeTrue();
         protocol.CountdownBeeps.Should().BeFalse();
-        protocol.IsDefault.Should().BeTrue();
     }
 
     [Theory]

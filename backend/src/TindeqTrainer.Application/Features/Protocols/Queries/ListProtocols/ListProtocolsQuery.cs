@@ -19,8 +19,7 @@ public class ListProtocolsHandler(AppDbContext dbContext) : IRequestHandler<List
                 x.WeightPercentage,
                 x.RepsPerSet,
                 x.NumberOfSets,
-                x.WorkSeconds,
-                x.IsDefault))
+                x.WorkSeconds))
             .ToListAsync(cancellationToken);
     }
 }

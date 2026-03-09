@@ -6,7 +6,6 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ApiClientError } from "@/lib/api-client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,10 +32,6 @@ function toTimerProtocol(protocol: Protocol): TimerProtocol {
     setRestSeconds: protocol.setRestSeconds,
     countdownSeconds: protocol.countdownSeconds,
   };
-}
-
-function formatSeconds(seconds: number): string {
-  return Number.isInteger(seconds) ? seconds.toFixed(0) : seconds.toFixed(1);
 }
 
 function getErrorMessage(message: unknown): string | undefined {
@@ -227,12 +222,9 @@ export function RepeaterPage() {
             <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium" htmlFor="protocol-select">
-                      Protocol
-                    </label>
-                    {selectedProtocolSummary?.isDefault ? <Badge variant="secondary">Default</Badge> : null}
-                  </div>
+                  <label className="text-sm font-medium" htmlFor="protocol-select">
+                    Protocol
+                  </label>
 
                   {protocolsQuery.isLoading ? (
                     <Skeleton className="h-10 w-full" />
@@ -264,7 +256,7 @@ export function RepeaterPage() {
                     type="button"
                     variant="destructive"
                     size="sm"
-                    disabled={!selectedProtocolSummary || selectedProtocolSummary.isDefault}
+                    disabled={!selectedProtocolSummary}
                     onClick={() => selectedProtocolSummary && setProtocolToDelete(selectedProtocolSummary)}
                   >
                     <Trash2 className="size-4" />
@@ -315,13 +307,6 @@ export function RepeaterPage() {
 
           {selectedProtocol ? (
             <Card>
-              <CardHeader>
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle>{selectedProtocolSummary?.name ?? selectedProtocol.name}</CardTitle>
-                  {selectedProtocolSummary?.isDefault ? <Badge variant="secondary">Default</Badge> : null}
-                </div>
-                <CardDescription>Edit the selected protocol inline. Save changes before starting the timer.</CardDescription>
-              </CardHeader>
               <CardContent>
                 <form className="space-y-4" onSubmit={form.handleSubmit(handleProtocolSave)}>
                   <div className="space-y-2">
@@ -433,12 +418,7 @@ export function RepeaterPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-muted-foreground">
-                      {form.formState.isDirty
-                        ? "You have unsaved protocol changes."
-                        : `Current work/rest: ${formatSeconds(selectedProtocol.workSeconds)}s / ${formatSeconds(selectedProtocol.restSeconds)}s`}
-                    </p>
+                  <div className="flex flex-wrap justify-end gap-2">
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
