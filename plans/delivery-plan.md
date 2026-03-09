@@ -278,31 +278,51 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 8: Audio and Connection Resilience
+## Step 8: Audio Cues
 
-- **Goal:** Add audio cues and BLE reconnection handling to complete the product.
+- **Goal:** Add audio feedback for phase transitions so the user can train without watching the screen.
 - **Scope:**
   - **Audio cues** (frontend-driven -- timer callbacks trigger audio directly in the browser):
     - Sounds: "beep" (countdown tick), "go" (work start), "rest" (rest start), "done" (session complete)
     - Protocol `AudioCues` and `CountdownBeeps` flags control which sounds play
     - No backend involvement -- audio is a pure frontend concern
+- **Tests:**
+  - Vitest tests for audio cue trigger conditions (respect protocol flags)
+  - Manual testing: audio playback
+- **Verification:** `npm run build`, `npm test`; launch app, verify audio plays on transitions
+- **Exit Criteria:** Audio cues play correctly on phase transitions, respecting protocol flags
+
+---
+
+## Step 9: BLE Connection Resilience
+
+- **Goal:** Handle BLE disconnections gracefully during training with automatic reconnection.
+- **Scope:**
   - **BLE reconnection:**
     - Backend detects disconnect via `ConnectionStatusChanged`, notifies frontend (`ConnectionLost` SignalR event)
     - Frontend pauses its own timer on `ConnectionLost`
     - Backend retries connection every 2s for up to 30s
     - On success: notify frontend (`Reconnected`), frontend resumes timer
     - On failure: prompt user to abort
-  - **Remaining polish:**
-    - Connection loss during training (auto-pause + reconnect flow)
-    - Hand switch skip (verify UX)
-    - Incomplete session indicator in history list
-    - Error boundaries and loading states
 - **Tests:**
   - Unit tests for reconnection retry logic (backend)
-  - Vitest tests for audio cue trigger conditions (respect protocol flags)
-  - Manual testing: audio playback
-- **Verification:** `dotnet build`, `dotnet test`, `npm run build`, `npm test`; launch app, verify audio plays on transitions, simulate BLE disconnect during training
-- **Exit Criteria:** All PRD features implemented; app handles BLE disconnection gracefully; audio cues work correctly
+- **Verification:** `dotnet build`, `dotnet test`; simulate BLE disconnect during training, verify auto-pause and reconnect flow
+- **Exit Criteria:** App handles BLE disconnection gracefully; training auto-pauses and resumes on reconnection
+
+---
+
+## Step 10: Polish
+
+- **Goal:** Final UX polish and robustness improvements across the app.
+- **Scope:**
+  - Connection loss during training (auto-pause + reconnect flow end-to-end verification)
+  - Hand switch skip UX verification
+  - Incomplete session indicator in history list
+  - Error boundaries and loading states
+- **Tests:**
+  - Manual end-to-end verification of all flows
+- **Verification:** `dotnet build`, `dotnet test`, `npm run build`, `npm test`; full walkthrough of all features
+- **Exit Criteria:** All PRD features implemented; app is robust and polished
 
 ---
 
