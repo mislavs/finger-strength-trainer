@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteProtocolDialog } from "@/features/protocols/DeleteProtocolDialog";
+import { ProtocolFieldError, getProtocolFieldErrorMessage } from "@/features/protocols/ProtocolFieldControls";
 import { useProtocol, useProtocols, useUpdateProtocol } from "@/features/protocols/hooks";
 import { protocolFieldNames, toProtocolInput, type Protocol, type ProtocolInput, type ProtocolSummary } from "@/features/protocols/models";
+import { ProtocolFlowFields } from "@/features/protocols/ProtocolFlowFields";
 import { protocolSchema, type ProtocolFormValues } from "@/features/protocols/schema";
 import { TimerDisplay } from "@/features/repeater/TimerDisplay";
 import { TimerPhase, type TimerHand, type TimerProtocol } from "@/features/repeater/models";
@@ -32,10 +34,6 @@ function toTimerProtocol(protocol: Protocol): TimerProtocol {
     setRestSeconds: protocol.setRestSeconds,
     countdownSeconds: protocol.countdownSeconds,
   };
-}
-
-function getErrorMessage(message: unknown): string | undefined {
-  return typeof message === "string" ? message : undefined;
 }
 
 export function RepeaterPage() {
@@ -316,107 +314,10 @@ export function RepeaterPage() {
                       disabled={!canConfigure || isSavingProtocol}
                       {...form.register("name")}
                     />
-                    {getErrorMessage(form.formState.errors.name?.message) ? (
-                      <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.name?.message)}</p>
-                    ) : null}
+                    <ProtocolFieldError message={getProtocolFieldErrorMessage(form.formState.errors.name?.message)} />
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label htmlFor="repsPerSet">Reps / Set</Label>
-                      <Input
-                        id="repsPerSet"
-                        type="number"
-                        step="1"
-                        disabled={!canConfigure || isSavingProtocol}
-                        {...form.register("repsPerSet", { valueAsNumber: true })}
-                      />
-                      {getErrorMessage(form.formState.errors.repsPerSet?.message) ? (
-                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.repsPerSet?.message)}</p>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label htmlFor="numberOfSets">Number of Sets</Label>
-                      <Input
-                        id="numberOfSets"
-                        type="number"
-                        step="1"
-                        disabled={!canConfigure || isSavingProtocol}
-                        {...form.register("numberOfSets", { valueAsNumber: true })}
-                      />
-                      {getErrorMessage(form.formState.errors.numberOfSets?.message) ? (
-                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.numberOfSets?.message)}</p>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label htmlFor="workSeconds">Work / Rest</Label>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Input
-                          id="workSeconds"
-                          type="number"
-                          step="0.1"
-                          disabled={!canConfigure || isSavingProtocol}
-                          {...form.register("workSeconds", { valueAsNumber: true })}
-                        />
-                        <Input
-                          id="restSeconds"
-                          type="number"
-                          step="0.1"
-                          disabled={!canConfigure || isSavingProtocol}
-                          {...form.register("restSeconds", { valueAsNumber: true })}
-                        />
-                      </div>
-                      {(getErrorMessage(form.formState.errors.workSeconds?.message) || getErrorMessage(form.formState.errors.restSeconds?.message)) ? (
-                        <p className="text-sm text-destructive">
-                          {getErrorMessage(form.formState.errors.workSeconds?.message) ?? getErrorMessage(form.formState.errors.restSeconds?.message)}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label htmlFor="handSwitchSeconds">Hand Switch</Label>
-                      <Input
-                        id="handSwitchSeconds"
-                        type="number"
-                        step="0.1"
-                        disabled={!canConfigure || isSavingProtocol}
-                        {...form.register("handSwitchSeconds", { valueAsNumber: true })}
-                      />
-                      {getErrorMessage(form.formState.errors.handSwitchSeconds?.message) ? (
-                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.handSwitchSeconds?.message)}</p>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label htmlFor="setRestSeconds">Set Rest (min)</Label>
-                      <Input
-                        id="setRestSeconds"
-                        type="number"
-                        step="0.5"
-                        disabled={!canConfigure || isSavingProtocol}
-                        {...form.register("setRestSeconds", { valueAsNumber: true })}
-                      />
-                      {getErrorMessage(form.formState.errors.setRestSeconds?.message) ? (
-                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.setRestSeconds?.message)}</p>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label htmlFor="countdownSeconds">Countdown</Label>
-                      <Input
-                        id="countdownSeconds"
-                        type="number"
-                        step="0.1"
-                        disabled={!canConfigure || isSavingProtocol}
-                        {...form.register("countdownSeconds", { valueAsNumber: true })}
-                      />
-                      {getErrorMessage(form.formState.errors.countdownSeconds?.message) ? (
-                        <p className="text-sm text-destructive">{getErrorMessage(form.formState.errors.countdownSeconds?.message)}</p>
-                      ) : null}
-                    </div>
-                  </div>
+                  <ProtocolFlowFields form={form} disabled={!canConfigure || isSavingProtocol} />
 
                   <div className="flex flex-wrap justify-end gap-2">
                     <div className="flex flex-wrap gap-2">

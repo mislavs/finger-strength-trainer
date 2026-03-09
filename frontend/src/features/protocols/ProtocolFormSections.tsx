@@ -7,45 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
-  timingFieldGroups,
   toggleFields,
-  type NumericFieldName,
   weightFields,
 } from "@/features/protocols/protocol-form.constants";
+import {
+  ProtocolFieldError,
+  ProtocolNumberField,
+  getProtocolFieldErrorMessage,
+} from "@/features/protocols/ProtocolFieldControls";
+import { ProtocolFlowFields } from "@/features/protocols/ProtocolFlowFields";
 import type { ProtocolFormValues } from "@/features/protocols/schema";
-
-function getErrorMessage(message: unknown): string | undefined {
-  return typeof message === "string" ? message : undefined;
-}
-
-interface FieldErrorProps {
-  message: string | undefined
-}
-
-function FieldError({ message }: FieldErrorProps) {
-  if (!message) {
-    return null;
-  }
-
-  return <p className="text-sm text-destructive">{message}</p>;
-}
-
-interface NumericInputFieldProps {
-  form: UseFormReturn<ProtocolFormValues>
-  name: NumericFieldName
-  label: string
-  step: string
-}
-
-function NumericInputField({ form, name, label, step }: NumericInputFieldProps) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} type="number" step={step} {...form.register(name, { valueAsNumber: true })} />
-      <FieldError message={getErrorMessage(form.formState.errors[name]?.message)} />
-    </div>
-  );
-}
 
 interface ProtocolFormSectionsProps {
   form: UseFormReturn<ProtocolFormValues>
@@ -69,17 +40,17 @@ export function ProtocolFormSections({
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
           <Input id="name" placeholder="7/3 Repeaters 60%" {...form.register("name")} />
-          <FieldError message={getErrorMessage(form.formState.errors.name?.message)} />
+          <ProtocolFieldError message={getProtocolFieldErrorMessage(form.formState.errors.name?.message)} />
         </div>
       </section>
 
       <Separator />
 
       <section className="space-y-3">
-        <h2 className="font-medium">Weight</h2>
+        <h2 className="font-medium">Load</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {weightFields.map((field) => (
-            <NumericInputField key={field.name} form={form} name={field.name} label={field.label} step={field.step} />
+            <ProtocolNumberField key={field.name} form={form} field={field} />
           ))}
         </div>
         <p className="text-sm text-muted-foreground">Target Weight: {Number.isFinite(targetWeight) ? targetWeight.toFixed(1) : "0.0"} kg</p>
@@ -87,24 +58,7 @@ export function ProtocolFormSections({
 
       <Separator />
 
-      <section className="space-y-3">
-        <h2 className="font-medium">Timing</h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {timingFieldGroups.map((group) => (
-            <div key={group.title} className="space-y-3 rounded-lg border p-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">{group.title}</h3>
-                <p className="text-sm text-muted-foreground">{group.description}</p>
-              </div>
-              <div className={group.fields.length > 1 ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
-                {group.fields.map((field) => (
-                  <NumericInputField key={field.name} form={form} name={field.name} label={field.label} step={field.step} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <ProtocolFlowFields form={form} disabled={isSubmitting} />
 
       <Separator />
 

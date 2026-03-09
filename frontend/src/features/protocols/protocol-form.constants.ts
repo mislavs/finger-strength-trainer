@@ -9,45 +9,39 @@ export interface NumericFieldDefinition {
   name: NumericFieldName
   label: string
   step: string
+  description?: string
 }
 
-export interface NumericFieldGroupDefinition {
-  title: string
-  description: string
-  fields: NumericFieldDefinition[]
-}
+export const protocolNumericFields: Record<NumericFieldName, NumericFieldDefinition> = {
+  maxWeightKg: { name: "maxWeightKg", label: "Max Weight (kg)", step: "0.1" },
+  weightPercentage: { name: "weightPercentage", label: "Weight Percentage (%)", step: "0.1" },
+  repsPerSet: { name: "repsPerSet", label: "Reps per hand", step: "1" },
+  numberOfSets: { name: "numberOfSets", label: "Sets", step: "1" },
+  workSeconds: { name: "workSeconds", label: "Work", step: "0.1" },
+  restSeconds: { name: "restSeconds", label: "Rest", step: "0.1" },
+  handSwitchSeconds: {
+    name: "handSwitchSeconds",
+    label: "Hand switch",
+    step: "0.1",
+    description: "Seconds to move to the other hand.",
+  },
+  setRestSeconds: {
+    name: "setRestSeconds",
+    label: "Set rest",
+    step: "0.5",
+    description: "Minutes before the next full set starts.",
+  },
+  countdownSeconds: {
+    name: "countdownSeconds",
+    label: "Countdown",
+    step: "0.1",
+    description: "Seconds before the timer starts.",
+  },
+};
 
 export const weightFields: NumericFieldDefinition[] = [
-  { name: "maxWeightKg", label: "Max Weight (kg)", step: "0.1" },
-  { name: "weightPercentage", label: "Weight Percentage (%)", step: "0.1" },
-];
-
-export const timingFieldGroups: NumericFieldGroupDefinition[] = [
-  {
-    title: "Start",
-    description: "Before the first rep begins.",
-    fields: [
-      { name: "countdownSeconds", label: "Countdown (seconds)", step: "0.1" },
-    ],
-  },
-  {
-    title: "Structure",
-    description: "How the session is organized.",
-    fields: [
-      { name: "repsPerSet", label: "Reps per Set", step: "1" },
-      { name: "numberOfSets", label: "Number of Sets", step: "1" },
-    ],
-  },
-  {
-    title: "Intervals",
-    description: "Durations during and between efforts.",
-    fields: [
-      { name: "workSeconds", label: "Work (seconds)", step: "0.1" },
-      { name: "restSeconds", label: "Rest (seconds)", step: "0.1" },
-      { name: "handSwitchSeconds", label: "Hand Switch (seconds)", step: "0.1" },
-      { name: "setRestSeconds", label: "Set Rest (minutes)", step: "0.5" },
-    ],
-  },
+  protocolNumericFields.maxWeightKg,
+  protocolNumericFields.weightPercentage,
 ];
 
 export const toggleFields: Array<{ name: ToggleFieldName; label: string; description: string }> = [
