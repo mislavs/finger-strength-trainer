@@ -119,6 +119,10 @@ public sealed class LiveStreamServiceSaveTests(IntegrationTestFactory factory) :
             return Task.CompletedTask;
         }
 
+        public void CancelConnect()
+        {
+        }
+
         public Task DisconnectAsync()
         {
             ConnectionStatusChanged?.Invoke(false);

@@ -17,10 +17,23 @@ public class TrainingHub(
     public async Task Connect()
     {
         var ct = Context.ConnectionAborted;
-        await _progressorService.ConnectAsync(ct);
-        await _progressorService.GetBatteryVoltageAsync(ct);
-        await _progressorService.GetFirmwareVersionAsync(ct);
+        try
+        {
+            await _progressorService.ConnectAsync(ct);
+            await _progressorService.GetBatteryVoltageAsync(ct);
+            await _progressorService.GetFirmwareVersionAsync(ct);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+        }
+
         await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), ct);
+    }
+
+    public Task CancelConnect()
+    {
+        _progressorService.CancelConnect();
+        return Task.CompletedTask;
     }
 
     public async Task Disconnect()

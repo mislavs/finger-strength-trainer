@@ -61,4 +61,44 @@ public class MockProgressorServiceTests
 
         sampleBatchCount.Should().Be(countAfterStop);
     }
+
+    [Fact]
+    public async Task CancelConnect_DuringConnect_ThrowsAndDoesNotConnect()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var service = new MockProgressorService();
+
+        var connectTask = service.ConnectAsync(cancellationToken);
+        await Task.Yield();
+
+        service.CancelConnect();
+
+        Func<Task> act = async () => await connectTask;
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        service.IsConnected.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CancelConnect_WhenNotConnecting_DoesNotThrow()
+    {
+        await using var service = new MockProgressorService();
+
+        var act = () => service.CancelConnect();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task CancelConnect_AfterConnected_RemainsConnected()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var service = new MockProgressorService();
+
+        await service.ConnectAsync(cancellationToken);
+
+        service.CancelConnect();
+
+        service.IsConnected.Should().BeTrue();
+    }
 }

@@ -9,7 +9,9 @@ public sealed class MockProgressorService : IProgressorService
     private static readonly TimeSpan SampleInterval = TimeSpan.FromMilliseconds(12.5);
     private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
 
+    private readonly object _connectCancellationLock = new();
     private readonly SemaphoreSlim _stateLock = new(1, 1);
+    private CancellationTokenSource? _connectCts;
     private CancellationTokenSource? _measurementCts;
     private Task? _measurementTask;
     private bool _disposed;
@@ -38,16 +40,58 @@ public sealed class MockProgressorService : IProgressorService
                 return;
             }
 
-            await Task.Delay(ScanDelay, cancellationToken).ConfigureAwait(false);
-            IsConnected = true;
-            DeviceName = "Progressor-Mock";
-            BatteryVoltage = 3.85f;
-            FirmwareVersion = "2.3-mock";
-            ConnectionStatusChanged?.Invoke(true);
+            using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            lock (_connectCancellationLock)
+            {
+                _connectCts = connectCts;
+            }
+
+            try
+            {
+                await Task.Delay(ScanDelay, connectCts.Token).ConfigureAwait(false);
+                IsConnected = true;
+                DeviceName = "Progressor-Mock";
+                BatteryVoltage = 3.85f;
+                FirmwareVersion = "2.3-mock";
+                ConnectionStatusChanged?.Invoke(true);
+            }
+            finally
+            {
+                lock (_connectCancellationLock)
+                {
+                    if (ReferenceEquals(_connectCts, connectCts))
+                    {
+                        _connectCts = null;
+                    }
+                }
+            }
         }
         finally
         {
             _stateLock.Release();
+        }
+    }
+
+    public void CancelConnect()
+    {
+        CancellationTokenSource? connectCts;
+        lock (_connectCancellationLock)
+        {
+            connectCts = _connectCts;
+        }
+
+        if (connectCts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            connectCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Best effort cancellation while the connection CTS is being cleaned up.
         }
     }
 

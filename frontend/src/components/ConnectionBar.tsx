@@ -11,7 +11,7 @@ function formatBatteryVoltage(batteryVoltage: number | null): string {
 }
 
 export function ConnectionBar() {
-  const { status, isBusy, isConnecting, error, connect, disconnect, tare } = useDeviceStatus();
+  const { status, isBusy, isConnecting, error, connect, cancelConnect, disconnect, tare } = useDeviceStatus();
   const isConnected = status.isConnected;
 
   return (
@@ -34,10 +34,10 @@ export function ConnectionBar() {
         <Button
           size="sm"
           variant={isConnected ? "outline" : "default"}
-          onClick={isConnected ? disconnect : connect}
-          disabled={isBusy}
+          onClick={isConnecting ? cancelConnect : isConnected ? disconnect : connect}
+          disabled={isBusy && !isConnecting}
         >
-          {isConnecting ? "Connecting..." : isConnected ? "Disconnect" : "Connect"}
+          {isConnecting ? "Cancel" : isConnected ? "Disconnect" : "Connect"}
         </Button>
         <Button size="sm" variant="secondary" onClick={tare} disabled={!isConnected || isBusy}>
           Tare

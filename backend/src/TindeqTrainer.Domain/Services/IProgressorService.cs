@@ -14,6 +14,8 @@ public interface IProgressorService : IAsyncDisposable
 
     Task ConnectAsync(CancellationToken cancellationToken = default);
 
+    void CancelConnect();
+
     Task DisconnectAsync();
 
     Task TareAsync(CancellationToken cancellationToken = default);

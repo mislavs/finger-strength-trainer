@@ -19,12 +19,14 @@ public sealed class ProgressorService : IProgressorService
 
     private readonly SemaphoreSlim _connectionLock = new(1, 1);
     private readonly SemaphoreSlim _commandLock = new(1, 1);
+    private readonly object _connectCancellationLock = new();
     private readonly object _responseLock = new();
 
     private BluetoothLEDevice? _device;
     private GattDeviceService? _service;
     private GattCharacteristic? _dataPointCharacteristic;
     private GattCharacteristic? _controlPointCharacteristic;
+    private CancellationTokenSource? _connectCts;
     private TaskCompletionSource<byte[]>? _commandResponseTcs;
     private bool _disposed;
 
@@ -52,12 +54,54 @@ public sealed class ProgressorService : IProgressorService
                 return;
             }
 
-            var bluetoothAddress = await ScanForDeviceAddressAsync(DefaultScanTimeout, cancellationToken).ConfigureAwait(false);
-            await ConnectCoreAsync(bluetoothAddress, cancellationToken).ConfigureAwait(false);
+            using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            lock (_connectCancellationLock)
+            {
+                _connectCts = connectCts;
+            }
+
+            try
+            {
+                var bluetoothAddress = await ScanForDeviceAddressAsync(DefaultScanTimeout, connectCts.Token).ConfigureAwait(false);
+                await ConnectCoreAsync(bluetoothAddress, connectCts.Token).ConfigureAwait(false);
+            }
+            finally
+            {
+                lock (_connectCancellationLock)
+                {
+                    if (ReferenceEquals(_connectCts, connectCts))
+                    {
+                        _connectCts = null;
+                    }
+                }
+            }
         }
         finally
         {
             _connectionLock.Release();
+        }
+    }
+
+    public void CancelConnect()
+    {
+        CancellationTokenSource? connectCts;
+        lock (_connectCancellationLock)
+        {
+            connectCts = _connectCts;
+        }
+
+        if (connectCts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            connectCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Best effort cancellation while the connection CTS is being cleaned up.
         }
     }
 
