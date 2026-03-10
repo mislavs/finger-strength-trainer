@@ -184,7 +184,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 6: Timer State Machine (Frontend)
+## Step 6: Timer State Machine (Frontend) (DONE)
 
 - **Goal:** Implement the work/rest/countdown/hand-switch timer as a frontend feature, giving users visible phase-driven countdowns for repeater training.
 - **Scope:**

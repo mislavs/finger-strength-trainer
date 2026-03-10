@@ -68,22 +68,21 @@ export function TimerDisplay({ state }: TimerDisplayProps) {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-md border border-current/20 bg-background/60 p-4">
+          <div className="rounded-md border border-current/20 bg-background/60 p-4 text-center">
             <p className="text-sm opacity-80">Rep</p>
             <p className="text-xl font-semibold">
               {state.currentRep || 0} of {state.totalReps || 0}
             </p>
           </div>
 
-          <div className="rounded-md border border-current/20 bg-background/60 p-4">
+          <div className="rounded-md border border-current/20 bg-background/60 p-4 text-center">
             <p className="text-sm opacity-80">Set</p>
             <p className="text-xl font-semibold">
               {state.currentSet || 0} of {state.totalSets || 0}
             </p>
           </div>
 
-          <div className="rounded-md border border-current/20 bg-background/60 p-4">
-            <p className="text-sm opacity-80">Hand</p>
+          <div className="flex items-center justify-center rounded-md border border-current/20 bg-background/60 p-4 text-center">
             <p className="text-xl font-semibold">{state.handLabel}</p>
           </div>
         </div>

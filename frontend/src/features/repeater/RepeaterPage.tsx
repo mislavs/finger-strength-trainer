@@ -8,6 +8,14 @@ import { toast } from "sonner";
 import { ApiClientError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +27,8 @@ import { ProtocolFlowFields } from "@/features/protocols/ProtocolFlowFields";
 import { protocolSchema, type ProtocolFormValues } from "@/features/protocols/schema";
 import { TimerDisplay } from "@/features/repeater/TimerDisplay";
 import { TimerPhase, type TimerHand, type TimerProtocol } from "@/features/repeater/models";
+import { useDeviceStatus } from "@/hooks/useDeviceStatus";
+import { useAudioCues } from "@/features/repeater/useAudioCues";
 import { useTimer } from "@/features/repeater/useTimer";
 import { appRoutes } from "@/lib/app-routes";
 
@@ -39,8 +49,12 @@ function toTimerProtocol(protocol: Protocol): TimerProtocol {
 export function RepeaterPage() {
   const protocolsQuery = useProtocols();
   const updateProtocol = useUpdateProtocol();
+  const { status: deviceStatus } = useDeviceStatus();
   const [selectedProtocolId, setSelectedProtocolId] = useState("");
   const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null);
+  const [startWarningOpen, setStartWarningOpen] = useState(false);
+  const [stopDialogOpen, setStopDialogOpen] = useState(false);
+  const [stopDialogPausedTimer, setStopDialogPausedTimer] = useState(false);
   const [startingHand, setStartingHand] = useState<TimerHand>("left");
   const timer = useTimer();
   const form = useForm<ProtocolFormValues>({
@@ -77,11 +91,15 @@ export function RepeaterPage() {
   const selectedProtocolQuery = useProtocol(effectiveSelectedProtocolId);
   const selectedProtocol = selectedProtocolQuery.data;
   const timerProtocol = selectedProtocol ? toTimerProtocol(selectedProtocol) : null;
+  const { resumeAudioContext } = useAudioCues(timer.state, {
+    audioCues: selectedProtocol?.audioCues ?? false,
+    countdownBeeps: selectedProtocol?.countdownBeeps ?? false,
+  });
   const hasSessionStarted = timer.state.phase !== TimerPhase.Idle;
   const canConfigure = timer.state.phase === TimerPhase.Idle;
   const isPaused = timer.state.phase === TimerPhase.Paused;
   const isSessionRunning = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
-  const isSessionComplete = timer.state.phase === TimerPhase.Done;
+  const requiresStopConfirmation = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
   const isSavingProtocol = updateProtocol.isPending;
 
   const selectedProtocolSummary = useMemo(
@@ -150,6 +168,63 @@ export function RepeaterPage() {
     }
   }
 
+  function startTimer(): void {
+    if (!timerProtocol) {
+      return;
+    }
+
+    resumeAudioContext();
+    timer.start(timerProtocol, startingHand);
+  }
+
+  function handleStartTimer(): void {
+    if (!deviceStatus.isConnected) {
+      setStartWarningOpen(true);
+      return;
+    }
+
+    startTimer();
+  }
+
+  function handleStartWithoutDevice(): void {
+    setStartWarningOpen(false);
+    startTimer();
+  }
+
+  function handleStopAction(): void {
+    if (!requiresStopConfirmation) {
+      timer.stop();
+      return;
+    }
+
+    if (!isPaused) {
+      timer.pause();
+      setStopDialogPausedTimer(true);
+    } else {
+      setStopDialogPausedTimer(false);
+    }
+
+    setStopDialogOpen(true);
+  }
+
+  function handleStopDialogChange(open: boolean): void {
+    setStopDialogOpen(open);
+
+    if (!open && stopDialogPausedTimer && timer.state.phase === TimerPhase.Paused) {
+      timer.resume();
+    }
+
+    if (!open) {
+      setStopDialogPausedTimer(false);
+    }
+  }
+
+  function handleStopConfirm(): void {
+    timer.stop();
+    setStopDialogPausedTimer(false);
+    setStopDialogOpen(false);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -162,7 +237,7 @@ export function RepeaterPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           {canConfigure ? (
-            <Button onClick={() => timerProtocol && timer.start(timerProtocol, startingHand)} disabled={!canStartTimer}>
+            <Button onClick={handleStartTimer} disabled={!canStartTimer}>
               Start Timer
             </Button>
           ) : null}
@@ -180,7 +255,7 @@ export function RepeaterPage() {
           ) : null}
 
           {hasSessionStarted ? (
-            <Button variant={isSessionRunning ? "destructive" : "outline"} onClick={timer.stop}>
+            <Button variant={isSessionRunning ? "destructive" : "outline"} onClick={handleStopAction}>
               {isSessionRunning ? "Stop" : "Back to Setup"}
             </Button>
           ) : null}
@@ -356,13 +431,43 @@ export function RepeaterPage() {
         </p>
       ) : null}
 
-      {isSessionComplete ? (
-        <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100">
-          Repeater timer complete.
-        </p>
-      ) : null}
-
       <DeleteProtocolDialog protocol={protocolToDelete} open={Boolean(protocolToDelete)} onOpenChange={handleDeleteDialogChange} />
+      <Dialog open={startWarningOpen} onOpenChange={setStartWarningOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Progressor not connected</DialogTitle>
+            <DialogDescription>
+              The Progressor is not connected right now. Are you sure you want to start the repeater timer anyway?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setStartWarningOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleStartWithoutDevice}>
+              Start Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={stopDialogOpen} onOpenChange={handleStopDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Stop repeater timer?</DialogTitle>
+            <DialogDescription>
+              This will end the current repeater session and return you to setup.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleStopDialogChange(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleStopConfirm}>
+              Stop Timer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
