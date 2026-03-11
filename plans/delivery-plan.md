@@ -278,7 +278,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 8: Audio Cues
+## Step 8: Audio Cues (DONE)
 
 - **Goal:** Add audio feedback for phase transitions so the user can train without watching the screen.
 - **Scope:**
