@@ -6,17 +6,26 @@ namespace TindeqTrainer.Api.Hubs;
 
 public class TrainingHub(
     IProgressorService _progressorService,
-    LiveStreamService _liveStreamService) : Hub
+    LiveStreamService _liveStreamService,
+    BleConnectionMonitor _connectionMonitor) : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        await Clients.Caller.SendAsync("DeviceStatus", BuildDeviceStatus(), Context.ConnectionAborted);
+        var cancellationToken = Context.ConnectionAborted;
+        await Clients.Caller.SendAsync("DeviceStatus", BuildDeviceStatus(), cancellationToken);
+        if (_connectionMonitor.IsReconnecting)
+        {
+            await Clients.Caller.SendAsync("ConnectionLost", cancellationToken);
+        }
+
         await base.OnConnectedAsync();
     }
 
     public async Task Connect()
     {
         var ct = Context.ConnectionAborted;
+        _connectionMonitor.CancelReconnection();
+
         try
         {
             await _progressorService.ConnectAsync(ct);
@@ -38,6 +47,7 @@ public class TrainingHub(
 
     public async Task Disconnect()
     {
+        _connectionMonitor.PrepareIntentionalDisconnect();
         await _progressorService.DisconnectAsync();
         await Clients.All.SendAsync("DeviceStatus", BuildDeviceStatus(), Context.ConnectionAborted);
     }

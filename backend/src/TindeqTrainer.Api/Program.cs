@@ -44,6 +44,7 @@ try
     builder.Services.AddSwaggerGen();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
+    builder.Services.AddSingleton<IConnectionNotifier, SignalRConnectionNotifier>();
     builder.Services.AddSingleton<ILiveStreamNotifier, SignalRLiveStreamNotifier>();
     builder.Services.AddCors(options =>
     {

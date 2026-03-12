@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using TindeqTrainer.Domain.Entities;
 using TindeqTrainer.Domain.Enums;
 using TindeqTrainer.Domain.Services;
@@ -8,13 +9,14 @@ using TindeqTrainer.Infrastructure.Persistence;
 
 namespace TindeqTrainer.Application.Services;
 
-public sealed class LiveStreamService(
-    IProgressorService progressorService,
-    ILiveStreamNotifier notifier,
-    IServiceScopeFactory serviceScopeFactory)
+public sealed class LiveStreamService
 {
     private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
 
+    private readonly IProgressorService _progressorService;
+    private readonly ILiveStreamNotifier _notifier;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ILogger<LiveStreamService> _logger;
     private readonly object _gate = new();
     private readonly ConcurrentQueue<ForceSample> _rawSamples = new();
     private readonly ConcurrentQueue<ForceSample> _pendingSamples = new();
@@ -29,6 +31,22 @@ public sealed class LiveStreamService(
     private int _sampleCount;
     private double _lastSampleTimestampSeconds;
 
+    public LiveStreamService(
+        IProgressorService progressorService,
+        ILiveStreamNotifier notifier,
+        IServiceScopeFactory serviceScopeFactory,
+        BleConnectionMonitor connectionMonitor,
+        ILogger<LiveStreamService> logger)
+    {
+        _progressorService = progressorService;
+        _notifier = notifier;
+        _serviceScopeFactory = serviceScopeFactory;
+        _logger = logger;
+
+        connectionMonitor.Reconnected += OnReconnected;
+        connectionMonitor.ReconnectionFailed += OnReconnectionFailed;
+    }
+
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         lock (_gate)
@@ -41,19 +59,19 @@ public sealed class LiveStreamService(
             ResetToIdleState();
             _state = LiveStreamState.Streaming;
             _startedAtUtc = DateTime.UtcNow;
-            progressorService.SamplesReceived += OnSamplesReceived;
+            _progressorService.SamplesReceived += OnSamplesReceived;
             _flushTimer = new Timer(OnFlushTimer, null, FlushInterval, FlushInterval);
         }
 
         try
         {
-            await progressorService.StartMeasurementAsync(cancellationToken);
+            await _progressorService.StartMeasurementAsync(cancellationToken);
         }
         catch
         {
             lock (_gate)
             {
-                progressorService.SamplesReceived -= OnSamplesReceived;
+                _progressorService.SamplesReceived -= OnSamplesReceived;
                 _flushTimer?.Dispose();
                 _flushTimer = null;
                 ResetToIdleState();
@@ -72,14 +90,14 @@ public sealed class LiveStreamService(
                 throw new InvalidOperationException("Live stream can only stop from the streaming state.");
             }
 
-            progressorService.SamplesReceived -= OnSamplesReceived;
+            _progressorService.SamplesReceived -= OnSamplesReceived;
             _flushTimer?.Dispose();
             _flushTimer = null;
         }
 
         try
         {
-            await progressorService.StopMeasurementAsync(cancellationToken);
+            await _progressorService.StopMeasurementAsync(cancellationToken);
         }
         catch
         {
@@ -87,7 +105,7 @@ public sealed class LiveStreamService(
             {
                 if (_state is LiveStreamState.Streaming)
                 {
-                    progressorService.SamplesReceived += OnSamplesReceived;
+                    _progressorService.SamplesReceived += OnSamplesReceived;
                     _flushTimer = new Timer(OnFlushTimer, null, FlushInterval, FlushInterval);
                 }
             }
@@ -104,7 +122,7 @@ public sealed class LiveStreamService(
         }
 
         var stats = BuildStats();
-        await notifier.SendLiveStreamStoppedAsync(stats);
+        await _notifier.SendLiveStreamStoppedAsync(stats);
         return stats;
     }
 
@@ -128,7 +146,7 @@ public sealed class LiveStreamService(
                 TimeSpan.FromSeconds(GetDurationSeconds()));
         }
 
-        using var scope = serviceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var session = Session.Create(
@@ -177,6 +195,60 @@ public sealed class LiveStreamService(
 
             ResetToIdleState();
         }
+    }
+
+    private void OnReconnected(DeviceStatusDto _status)
+    {
+        _ = ResumeAfterReconnectAsync();
+    }
+
+    private void OnReconnectionFailed()
+    {
+        _ = StopAfterReconnectionFailureAsync();
+    }
+
+    private async Task ResumeAfterReconnectAsync()
+    {
+        lock (_gate)
+        {
+            if (_state is not LiveStreamState.Streaming)
+            {
+                return;
+            }
+
+            _progressorService.SamplesReceived -= OnSamplesReceived;
+            _progressorService.SamplesReceived += OnSamplesReceived;
+        }
+
+        try
+        {
+            await _progressorService.StartMeasurementAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to restart live stream measurement after BLE reconnection. Finalizing the partial recording.");
+            await StopAfterReconnectionFailureAsync();
+        }
+    }
+
+    private async Task StopAfterReconnectionFailureAsync()
+    {
+        lock (_gate)
+        {
+            if (_state is not LiveStreamState.Streaming)
+            {
+                return;
+            }
+
+            _progressorService.SamplesReceived -= OnSamplesReceived;
+            _flushTimer?.Dispose();
+            _flushTimer = null;
+            _state = LiveStreamState.Stopped;
+            _stoppedAtUtc = DateTime.UtcNow;
+        }
+
+        await FlushPendingSamplesAsync(allowWhenStopped: true);
+        await _notifier.SendLiveStreamStoppedAsync(BuildStats());
     }
 
     private async void OnFlushTimer(object? _)
@@ -244,7 +316,7 @@ public sealed class LiveStreamService(
                 (float)(summedWeight / count),
                 latestTimestamp);
 
-            await notifier.SendForceSamplesAsync([averagedSample]);
+            await _notifier.SendForceSamplesAsync([averagedSample]);
         }
         finally
         {

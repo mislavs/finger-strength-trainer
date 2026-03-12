@@ -16,7 +16,7 @@ const streamLabels = {
 } as const;
 
 export function LiveStreamPage() {
-  const { status: deviceStatus } = useDeviceStatus();
+  const { status: deviceStatus, isReconnecting, reconnectionFailed } = useDeviceStatus();
   const { samples, stats, stoppedStats, streamState, isBusy, error, start, stop, save, discard } = useLiveStream();
 
   const primaryAction = useMemo(() => {
@@ -68,6 +68,18 @@ export function LiveStreamPage() {
       {!deviceStatus.isConnected && streamState !== "streaming" ? (
         <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Connect to a device before starting a live stream.
+        </p>
+      ) : null}
+
+      {isReconnecting && streamState === "streaming" ? (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          BLE connection lost. Trying to reconnect before the live stream is stopped.
+        </p>
+      ) : null}
+
+      {reconnectionFailed && streamState === "streaming" ? (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          Could not reconnect to the device. The live stream is being finalized so you can save or discard the partial recording.
         </p>
       ) : null}
 

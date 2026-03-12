@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TindeqTrainer.Api.Hubs;
 using TindeqTrainer.Application.Services;
@@ -13,6 +14,7 @@ namespace TindeqTrainer.Application.Tests.Hubs;
 public sealed class TrainingHubTests
 {
     private readonly IProgressorService _progressorService;
+    private readonly IConnectionNotifier _connectionNotifier;
     private readonly IHubCallerClients _clients;
     private readonly IClientProxy _allClientProxy;
     private readonly TrainingHub _sut;
@@ -20,11 +22,23 @@ public sealed class TrainingHubTests
     public TrainingHubTests()
     {
         _progressorService = Substitute.For<IProgressorService>();
+        _connectionNotifier = Substitute.For<IConnectionNotifier>();
         _clients = Substitute.For<IHubCallerClients>();
         _allClientProxy = Substitute.For<IClientProxy>();
         var notifier = Substitute.For<ILiveStreamNotifier>();
         var serviceScopeFactory = Substitute.For<IServiceScopeFactory>();
-        var liveStreamService = new LiveStreamService(_progressorService, notifier, serviceScopeFactory);
+        var connectionMonitor = new BleConnectionMonitor(
+            _progressorService,
+            _connectionNotifier,
+            NullLogger<BleConnectionMonitor>.Instance,
+            TimeSpan.FromMilliseconds(5),
+            3);
+        var liveStreamService = new LiveStreamService(
+            _progressorService,
+            notifier,
+            serviceScopeFactory,
+            connectionMonitor,
+            NullLogger<LiveStreamService>.Instance);
 
         _allClientProxy
             .SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>())
@@ -35,7 +49,7 @@ public sealed class TrainingHubTests
         _progressorService.BatteryVoltage.Returns((float?)null);
         _progressorService.FirmwareVersion.Returns((string?)null);
 
-        _sut = new TrainingHub(_progressorService, liveStreamService)
+        _sut = new TrainingHub(_progressorService, liveStreamService, connectionMonitor)
         {
             Clients = _clients,
             Context = new TestHubCallerContext(TestContext.Current.CancellationToken),
@@ -89,6 +103,22 @@ public sealed class TrainingHubTests
         await _sut.CancelConnect();
 
         _progressorService.Received(1).CancelConnect();
+    }
+
+    [Fact]
+    public async Task Disconnect_WhenCalled_DoesNotTriggerAutomaticReconnect()
+    {
+        _progressorService.IsConnected.Returns(true);
+        _progressorService.DisconnectAsync().Returns(_ =>
+        {
+            _progressorService.ConnectionStatusChanged += Raise.Event<Action<bool>>(false);
+            return Task.CompletedTask;
+        });
+
+        await _sut.Disconnect();
+        await Task.Delay(25, TestContext.Current.CancellationToken);
+
+        await _connectionNotifier.DidNotReceive().SendConnectionLostAsync();
     }
 
     private sealed class TestHubCallerContext(CancellationToken connectionAborted) : HubCallerContext

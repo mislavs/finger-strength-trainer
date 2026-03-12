@@ -101,4 +101,28 @@ public class MockProgressorServiceTests
 
         service.IsConnected.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task SimulateUnexpectedDisconnect_WhenConnected_RaisesDisconnectEventAndStopsMeasurement()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var service = new MockProgressorService();
+        var statusTransitions = new List<bool>();
+        var sampleBatchCount = 0;
+
+        service.ConnectionStatusChanged += isConnected => statusTransitions.Add(isConnected);
+        service.SamplesReceived += _ => Interlocked.Increment(ref sampleBatchCount);
+
+        await service.ConnectAsync(cancellationToken);
+        await service.StartMeasurementAsync(cancellationToken);
+        await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+
+        await service.SimulateUnexpectedDisconnectAsync();
+        var countAfterDisconnect = sampleBatchCount;
+        await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+
+        statusTransitions.Should().Equal(true, false);
+        service.IsConnected.Should().BeFalse();
+        sampleBatchCount.Should().Be(countAfterDisconnect);
+    }
 }

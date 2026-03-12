@@ -294,7 +294,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 9: BLE Connection Resilience
+## Step 9: BLE Connection Resilience (DONE)
 
 - **Goal:** Handle BLE disconnections gracefully during training with automatic reconnection.
 - **Scope:**
@@ -311,7 +311,7 @@ frontend/                              React SPA (Vite + TypeScript)
 
 ---
 
-## Step 10: Polish
+## Step 10: Polish (DONE)
 
 - **Goal:** Final UX polish and robustness improvements across the app.
 - **Scope:**

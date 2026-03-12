@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TindeqTrainer.Application.Services;
 using TindeqTrainer.Domain.Enums;
@@ -21,7 +22,19 @@ public sealed class LiveStreamServiceSaveTests(IntegrationTestFactory factory) :
         var progressorService = new ManualProgressorService();
         var notifier = Substitute.For<ILiveStreamNotifier>();
         var scopeFactory = CreateScopeFactory(DbContext);
-        var sut = new LiveStreamService(progressorService, notifier, scopeFactory);
+        var connectionNotifier = Substitute.For<IConnectionNotifier>();
+        var connectionMonitor = new BleConnectionMonitor(
+            progressorService,
+            connectionNotifier,
+            NullLogger<BleConnectionMonitor>.Instance,
+            TimeSpan.FromMilliseconds(5),
+            3);
+        var sut = new LiveStreamService(
+            progressorService,
+            notifier,
+            scopeFactory,
+            connectionMonitor,
+            NullLogger<LiveStreamService>.Instance);
         var samples = new[]
         {
             new ForceSample(12f, 0.1),
@@ -54,7 +67,19 @@ public sealed class LiveStreamServiceSaveTests(IntegrationTestFactory factory) :
         var progressorService = new ManualProgressorService();
         var notifier = Substitute.For<ILiveStreamNotifier>();
         var scopeFactory = CreateScopeFactory(DbContext);
-        var sut = new LiveStreamService(progressorService, notifier, scopeFactory);
+        var connectionNotifier = Substitute.For<IConnectionNotifier>();
+        var connectionMonitor = new BleConnectionMonitor(
+            progressorService,
+            connectionNotifier,
+            NullLogger<BleConnectionMonitor>.Instance,
+            TimeSpan.FromMilliseconds(5),
+            3);
+        var sut = new LiveStreamService(
+            progressorService,
+            notifier,
+            scopeFactory,
+            connectionMonitor,
+            NullLogger<LiveStreamService>.Instance);
         var samples = new[]
         {
             new ForceSample(8f, 0.05),

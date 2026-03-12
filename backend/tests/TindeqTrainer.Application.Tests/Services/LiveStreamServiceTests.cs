@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TindeqTrainer.Application.Services;
 using TindeqTrainer.Domain.Enums;
@@ -18,6 +19,7 @@ public sealed class LiveStreamServiceTests : IDisposable
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IServiceScope _scope;
     private readonly IServiceProvider _serviceProvider;
+    private readonly BleConnectionMonitor _connectionMonitor;
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _dbContext;
     private readonly LiveStreamService _sut;
@@ -44,7 +46,20 @@ public sealed class LiveStreamServiceTests : IDisposable
         _scope.ServiceProvider.Returns(_serviceProvider);
         _serviceScopeFactory.CreateScope().Returns(_scope);
 
-        _sut = new LiveStreamService(_progressorService, _notifier, _serviceScopeFactory);
+        var connectionNotifier = Substitute.For<IConnectionNotifier>();
+        _connectionMonitor = new BleConnectionMonitor(
+            _progressorService,
+            connectionNotifier,
+            NullLogger<BleConnectionMonitor>.Instance,
+            TimeSpan.FromMilliseconds(5),
+            3);
+
+        _sut = new LiveStreamService(
+            _progressorService,
+            _notifier,
+            _serviceScopeFactory,
+            _connectionMonitor,
+            NullLogger<LiveStreamService>.Instance);
     }
 
     [Fact]
@@ -169,6 +184,53 @@ public sealed class LiveStreamServiceTests : IDisposable
             Math.Abs(batch[0].TimestampSeconds - 0.3d) < 0.001d));
 
         await _sut.StopAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task Reconnected_WhenStreaming_RestartsMeasurement()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _sut.StartAsync(cancellationToken);
+
+        _progressorService.ConnectAsync(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _progressorService.GetBatteryVoltageAsync(Arg.Any<CancellationToken>()).Returns(3.9f);
+        _progressorService.GetFirmwareVersionAsync(Arg.Any<CancellationToken>()).Returns("fw");
+        _progressorService.IsConnected.Returns(true);
+        _progressorService.DeviceName.Returns("Progressor-Test");
+        _progressorService.BatteryVoltage.Returns(3.9f);
+        _progressorService.FirmwareVersion.Returns("fw");
+
+        _progressorService.ConnectionStatusChanged += Raise.Event<Action<bool>>(false);
+        await Task.Delay(50, cancellationToken);
+
+        await _progressorService.Received(2).StartMeasurementAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReconnectionFailed_WhenStreaming_FinalizesStoppedSession()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var liveStreamStopped = new TaskCompletionSource<LiveStreamStatsDto>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _notifier.SendLiveStreamStoppedAsync(Arg.Any<LiveStreamStatsDto>()).Returns(callInfo =>
+        {
+            liveStreamStopped.TrySetResult(callInfo.Arg<LiveStreamStatsDto>());
+            return Task.CompletedTask;
+        });
+
+        await _sut.StartAsync(cancellationToken);
+        _progressorService.SamplesReceived += Raise.Event<Action<ForceSample[]>>(new[] { new ForceSample(11f, 0.25) });
+        _progressorService.ConnectAsync(Arg.Any<CancellationToken>()).Returns<Task>(_ =>
+            throw new InvalidOperationException("Still disconnected."));
+
+        _progressorService.ConnectionStatusChanged += Raise.Event<Action<bool>>(false);
+        var stats = await liveStreamStopped.Task.WaitAsync(cancellationToken);
+
+        stats.PeakForceKg.Should().Be(11d);
+        stats.DurationSeconds.Should().Be(0.25d);
+        stats.AvgForceKg.Should().Be(11d);
+        await _progressorService.Received(3).ConnectAsync(Arg.Any<CancellationToken>());
+        Func<Task> act = () => _sut.SaveAsync(cancellationToken);
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]

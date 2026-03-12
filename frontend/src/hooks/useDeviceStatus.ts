@@ -17,6 +17,8 @@ interface UseDeviceStatusResult {
   status: DeviceStatus
   isBusy: boolean
   isConnecting: boolean
+  isReconnecting: boolean
+  reconnectionFailed: boolean
   error: string | null
   connect: () => Promise<void>
   cancelConnect: () => Promise<void>
@@ -58,12 +60,33 @@ export function useDeviceStatus(): UseDeviceStatusResult {
   const { connection } = useSignalR();
   const [status, setStatus] = useState<DeviceStatus>(emptyStatus);
   const [activeCommand, setActiveCommand] = useState<DeviceCommand | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectionFailed, setReconnectionFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeCommandIdRef = useRef(0);
   const connectAttemptIdRef = useRef(0);
   const canceledConnectAttemptIdRef = useRef<number | null>(null);
   const isBusy = activeCommand !== null;
   const isConnecting = activeCommand === "Connect";
+
+  const clearReconnectState = useCallback(() => {
+    setIsReconnecting(false);
+    setReconnectionFailed(false);
+  }, []);
+
+  const applyStatus = useCallback((nextStatus: Partial<DeviceStatus> | null | undefined) => {
+    setStatus(normalizeStatus(nextStatus));
+    clearReconnectState();
+    setError(null);
+  }, [clearReconnectState]);
+
+  const markDisconnected = useCallback((nextError: string | null) => {
+    setStatus((currentStatus) => ({
+      ...currentStatus,
+      isConnected: false,
+    }));
+    setError(nextError);
+  }, []);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -92,15 +115,42 @@ export function useDeviceStatus(): UseDeviceStatusResult {
 
   useEffect(() => {
     const onDeviceStatus = (nextStatus: DeviceStatus) => {
-      setStatus(normalizeStatus(nextStatus));
-      setError(null);
+      applyStatus(nextStatus);
     };
 
     connection.on("DeviceStatus", onDeviceStatus);
     return () => {
       connection.off("DeviceStatus", onDeviceStatus);
     };
-  }, [connection]);
+  }, [applyStatus, connection]);
+
+  useEffect(() => {
+    const onConnectionLost = () => {
+      markDisconnected(null);
+      setIsReconnecting(true);
+      setReconnectionFailed(false);
+    };
+
+    const onReconnected = (nextStatus: DeviceStatus) => {
+      applyStatus(nextStatus);
+    };
+
+    const onReconnectionFailed = () => {
+      markDisconnected("Lost the BLE connection and could not reconnect. Reconnect manually to continue.");
+      setIsReconnecting(false);
+      setReconnectionFailed(true);
+    };
+
+    connection.on("ConnectionLost", onConnectionLost);
+    connection.on("Reconnected", onReconnected);
+    connection.on("ReconnectionFailed", onReconnectionFailed);
+
+    return () => {
+      connection.off("ConnectionLost", onConnectionLost);
+      connection.off("Reconnected", onReconnected);
+      connection.off("ReconnectionFailed", onReconnectionFailed);
+    };
+  }, [applyStatus, connection, markDisconnected]);
 
   const runCommand = useCallback(
     async (command: DeviceCommand) => {
@@ -119,6 +169,7 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       }
 
       setActiveCommand(command);
+      clearReconnectState();
       setError(null);
 
       try {
@@ -151,7 +202,7 @@ export function useDeviceStatus(): UseDeviceStatusResult {
         finishCommand();
       }
     },
-    [connection],
+    [clearReconnectState, connection],
   );
 
   const connect = useCallback(async () => {
@@ -191,12 +242,14 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       status,
       isBusy,
       isConnecting,
+      isReconnecting,
+      reconnectionFailed,
       error,
       connect,
       cancelConnect,
       disconnect,
       tare,
     }),
-    [cancelConnect, connect, disconnect, error, isBusy, isConnecting, status, tare],
+    [cancelConnect, connect, disconnect, error, isBusy, isConnecting, isReconnecting, reconnectionFailed, status, tare],
   );
 }

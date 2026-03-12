@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -49,13 +49,15 @@ function toTimerProtocol(protocol: Protocol): TimerProtocol {
 export function RepeaterPage() {
   const protocolsQuery = useProtocols();
   const updateProtocol = useUpdateProtocol();
-  const { status: deviceStatus } = useDeviceStatus();
+  const { status: deviceStatus, isReconnecting, reconnectionFailed } = useDeviceStatus();
   const [selectedProtocolId, setSelectedProtocolId] = useState("");
   const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null);
   const [startWarningOpen, setStartWarningOpen] = useState(false);
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [stopDialogPausedTimer, setStopDialogPausedTimer] = useState(false);
+  const [connectionFailureDialogOpen, setConnectionFailureDialogOpen] = useState(false);
   const [startingHand, setStartingHand] = useState<TimerHand>("left");
+  const reconnectPausedTimerRef = useRef(false);
   const timer = useTimer();
   const form = useForm<ProtocolFormValues>({
     resolver: zodResolver(protocolSchema),
@@ -128,6 +130,39 @@ export function RepeaterPage() {
     form.reset(toProtocolInput(selectedProtocol));
   }, [form, selectedProtocol]);
 
+  useEffect(() => {
+    if (!isReconnecting || !hasSessionStarted || timer.state.phase === TimerPhase.Done || timer.state.phase === TimerPhase.Paused) {
+      return;
+    }
+
+    reconnectPausedTimerRef.current = true;
+    timer.pause();
+    toast.error("BLE connection lost. Pausing the repeater timer while the app reconnects.");
+  }, [hasSessionStarted, isReconnecting, timer, timer.state.phase]);
+
+  useEffect(() => {
+    if (!reconnectPausedTimerRef.current || !reconnectionFailed || !hasSessionStarted) {
+      return;
+    }
+
+    setConnectionFailureDialogOpen(true);
+  }, [hasSessionStarted, reconnectionFailed]);
+
+  useEffect(() => {
+    if (!reconnectPausedTimerRef.current) {
+      return;
+    }
+
+    if (!deviceStatus.isConnected || isReconnecting || stopDialogOpen || timer.state.phase !== TimerPhase.Paused) {
+      return;
+    }
+
+    reconnectPausedTimerRef.current = false;
+    setConnectionFailureDialogOpen(false);
+    timer.resume();
+    toast.success("BLE reconnected. Resuming the repeater timer.");
+  }, [deviceStatus.isConnected, isReconnecting, stopDialogOpen, timer, timer.state.phase]);
+
   async function handleProtocolSave(values: ProtocolFormValues): Promise<void> {
     if (!selectedProtocol) {
       return;
@@ -174,6 +209,7 @@ export function RepeaterPage() {
     }
 
     resumeAudioContext();
+    clearReconnectPauseTracking();
     timer.start(timerProtocol, startingHand);
   }
 
@@ -220,9 +256,25 @@ export function RepeaterPage() {
   }
 
   function handleStopConfirm(): void {
+    clearReconnectPauseTracking();
     timer.stop();
     setStopDialogPausedTimer(false);
     setStopDialogOpen(false);
+  }
+
+  function clearReconnectPauseTracking(): void {
+    reconnectPausedTimerRef.current = false;
+    setConnectionFailureDialogOpen(false);
+  }
+
+  function handleKeepPausedAfterReconnectFailure(): void {
+    clearReconnectPauseTracking();
+  }
+
+  function handleAbortAfterReconnectFailure(): void {
+    clearReconnectPauseTracking();
+    timer.stop();
+    toast.error("Repeater session aborted after the BLE reconnect window expired.");
   }
 
   return (
@@ -431,6 +483,12 @@ export function RepeaterPage() {
         </p>
       ) : null}
 
+      {isReconnecting && hasSessionStarted ? (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          BLE connection lost. The repeater timer is paused while the app tries to reconnect.
+        </p>
+      ) : null}
+
       <DeleteProtocolDialog protocol={protocolToDelete} open={Boolean(protocolToDelete)} onOpenChange={handleDeleteDialogChange} />
       <Dialog open={startWarningOpen} onOpenChange={setStartWarningOpen}>
         <DialogContent>
@@ -464,6 +522,24 @@ export function RepeaterPage() {
             </Button>
             <Button type="button" variant="destructive" onClick={handleStopConfirm}>
               Stop Timer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={connectionFailureDialogOpen} onOpenChange={setConnectionFailureDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unable to reconnect to the Progressor</DialogTitle>
+            <DialogDescription>
+              The repeater timer is paused and the automatic BLE reconnect window has expired. Reconnect the device manually to resume, or abort this timer session.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleKeepPausedAfterReconnectFailure}>
+              Keep Paused
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleAbortAfterReconnectFailure}>
+              Abort Session
             </Button>
           </DialogFooter>
         </DialogContent>

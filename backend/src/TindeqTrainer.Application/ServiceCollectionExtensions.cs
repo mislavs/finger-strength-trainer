@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddSingleton<BleConnectionMonitor>();
         services.AddSingleton<LiveStreamService>();
 
         return services;

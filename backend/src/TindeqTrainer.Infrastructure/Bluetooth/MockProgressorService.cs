@@ -124,6 +124,32 @@ public sealed class MockProgressorService : IProgressorService
         }
     }
 
+    public async Task SimulateUnexpectedDisconnectAsync()
+    {
+        ThrowIfDisposed();
+
+        await _stateLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await StopMeasurementCoreAsync().ConfigureAwait(false);
+
+            var wasConnected = IsConnected;
+            IsConnected = false;
+            DeviceName = null;
+            BatteryVoltage = null;
+            FirmwareVersion = null;
+
+            if (wasConnected)
+            {
+                ConnectionStatusChanged?.Invoke(false);
+            }
+        }
+        finally
+        {
+            _stateLock.Release();
+        }
+    }
+
     public Task TareAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
