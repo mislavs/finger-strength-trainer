@@ -7,6 +7,7 @@ namespace TindeqTrainer.Api.Hubs;
 public class TrainingHub(
     IProgressorService _progressorService,
     LiveStreamService _liveStreamService,
+    RepeaterStreamService _repeaterStreamService,
     BleConnectionMonitor _connectionMonitor) : Hub
 {
     public override async Task OnConnectedAsync()
@@ -59,6 +60,11 @@ public class TrainingHub(
 
     public async Task StartLiveStream()
     {
+        if (_repeaterStreamService.IsStreaming)
+        {
+            throw new HubException("Stop the repeater stream before starting a live stream.");
+        }
+
         await _liveStreamService.StartAsync(Context.ConnectionAborted);
     }
 
@@ -76,6 +82,26 @@ public class TrainingHub(
     {
         _liveStreamService.Discard();
         return Task.CompletedTask;
+    }
+
+    public async Task StartRepeaterStream()
+    {
+        if (_liveStreamService.IsStreaming)
+        {
+            throw new HubException("Stop the live stream before starting repeater force streaming.");
+        }
+
+        await _repeaterStreamService.StartAsync(Context.ConnectionAborted);
+    }
+
+    public async Task StopRepeaterStream()
+    {
+        if (!_repeaterStreamService.IsStreaming)
+        {
+            return;
+        }
+
+        await _repeaterStreamService.StopAsync(Context.ConnectionAborted);
     }
 
     private DeviceStatusDto BuildDeviceStatus()

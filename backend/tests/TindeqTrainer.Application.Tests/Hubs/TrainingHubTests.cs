@@ -17,6 +17,8 @@ public sealed class TrainingHubTests
     private readonly IConnectionNotifier _connectionNotifier;
     private readonly IHubCallerClients _clients;
     private readonly IClientProxy _allClientProxy;
+    private readonly LiveStreamService _liveStreamService;
+    private readonly RepeaterStreamService _repeaterStreamService;
     private readonly TrainingHub _sut;
 
     public TrainingHubTests()
@@ -33,12 +35,16 @@ public sealed class TrainingHubTests
             NullLogger<BleConnectionMonitor>.Instance,
             TimeSpan.FromMilliseconds(5),
             3);
-        var liveStreamService = new LiveStreamService(
+        _liveStreamService = new LiveStreamService(
             _progressorService,
             notifier,
             serviceScopeFactory,
             connectionMonitor,
             NullLogger<LiveStreamService>.Instance);
+        _repeaterStreamService = new RepeaterStreamService(
+            _progressorService,
+            notifier,
+            NullLogger<RepeaterStreamService>.Instance);
 
         _allClientProxy
             .SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>())
@@ -49,7 +55,7 @@ public sealed class TrainingHubTests
         _progressorService.BatteryVoltage.Returns((float?)null);
         _progressorService.FirmwareVersion.Returns((string?)null);
 
-        _sut = new TrainingHub(_progressorService, liveStreamService, connectionMonitor)
+        _sut = new TrainingHub(_progressorService, _liveStreamService, _repeaterStreamService, connectionMonitor)
         {
             Clients = _clients,
             Context = new TestHubCallerContext(TestContext.Current.CancellationToken),
@@ -119,6 +125,43 @@ public sealed class TrainingHubTests
         await Task.Delay(25, TestContext.Current.CancellationToken);
 
         await _connectionNotifier.DidNotReceive().SendConnectionLostAsync();
+    }
+
+    [Fact]
+    public async Task StartLiveStream_WhenRepeaterStreamIsRunning_ThrowsHubException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _repeaterStreamService.StartAsync(cancellationToken);
+
+        var act = () => _sut.StartLiveStream();
+
+        await act.Should().ThrowAsync<HubException>()
+            .WithMessage("Stop the repeater stream before starting a live stream.");
+
+        await _repeaterStreamService.StopAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task StartRepeaterStream_WhenLiveStreamIsRunning_ThrowsHubException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _liveStreamService.StartAsync(cancellationToken);
+
+        var act = () => _sut.StartRepeaterStream();
+
+        await act.Should().ThrowAsync<HubException>()
+            .WithMessage("Stop the live stream before starting repeater force streaming.");
+
+        await _liveStreamService.StopAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task StopRepeaterStream_WhenIdle_IsNoOp()
+    {
+        var act = () => _sut.StopRepeaterStream();
+
+        await act.Should().NotThrowAsync();
+        await _progressorService.DidNotReceive().StopMeasurementAsync(Arg.Any<CancellationToken>());
     }
 
     private sealed class TestHubCallerContext(CancellationToken connectionAborted) : HubCallerContext

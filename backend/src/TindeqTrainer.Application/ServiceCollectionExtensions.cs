@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddSingleton<BleConnectionMonitor>();
         services.AddSingleton<LiveStreamService>();
+        services.AddSingleton<RepeaterStreamService>();
 
         return services;
     }

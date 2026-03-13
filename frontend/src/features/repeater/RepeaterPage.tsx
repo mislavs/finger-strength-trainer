@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -6,6 +6,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ApiClientError } from "@/lib/api-client";
+import { ForceChart } from "@/components/ForceChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,10 +30,24 @@ import { TimerDisplay } from "@/features/repeater/TimerDisplay";
 import { TimerPhase, type TimerHand, type TimerProtocol } from "@/features/repeater/models";
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
 import { useAudioCues } from "@/features/repeater/useAudioCues";
+import { useRepeaterStream } from "@/features/repeater/useRepeaterStream";
 import { useTimer } from "@/features/repeater/useTimer";
 import { appRoutes } from "@/lib/app-routes";
 
 const secondsPerMinute = 60;
+
+function shouldShowRepeaterForceChart(phase: TimerPhase): boolean {
+  return phase === TimerPhase.Countdown
+    || phase === TimerPhase.Work
+    || phase === TimerPhase.Rest
+    || phase === TimerPhase.Paused;
+}
+
+function shouldRestartRepeaterForceStream(phase: TimerPhase): boolean {
+  return phase === TimerPhase.Countdown
+    || phase === TimerPhase.Work
+    || phase === TimerPhase.Rest;
+}
 
 function toTimerProtocol(protocol: Protocol): TimerProtocol {
   return {
@@ -58,7 +73,26 @@ export function RepeaterPage() {
   const [connectionFailureDialogOpen, setConnectionFailureDialogOpen] = useState(false);
   const [startingHand, setStartingHand] = useState<TimerHand>("left");
   const reconnectPausedTimerRef = useRef(false);
-  const timer = useTimer();
+  const pausedFromPhaseRef = useRef<TimerPhase | null>(null);
+  const repeaterStream = useRepeaterStream();
+  const timer = useTimer({
+    onWorkStart: (_set, rep) => {
+      if (rep === 1 && deviceStatus.isConnected) {
+        void repeaterStream.start();
+      }
+    },
+    onHandSwitch: () => {
+      void repeaterStream.stop();
+      repeaterStream.resetSamples();
+    },
+    onSetRestStart: () => {
+      void repeaterStream.stop();
+      repeaterStream.resetSamples();
+    },
+    onComplete: () => {
+      void repeaterStream.stop();
+    },
+  });
   const form = useForm<ProtocolFormValues>({
     resolver: zodResolver(protocolSchema),
     defaultValues: {
@@ -103,6 +137,12 @@ export function RepeaterPage() {
   const isSessionRunning = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
   const requiresStopConfirmation = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
   const isSavingProtocol = updateProtocol.isPending;
+  const hasForceSamples = repeaterStream.samples.length > 0;
+  const showForceChart = hasSessionStarted
+    && shouldShowRepeaterForceChart(timer.state.phase)
+    && (deviceStatus.isConnected || hasForceSamples);
+  const isWorkPhase = timer.state.phase === TimerPhase.Work;
+  const targetForceKg = isWorkPhase ? selectedProtocol?.targetWeightKg : undefined;
 
   const selectedProtocolSummary = useMemo(
     () => protocolsQuery.data?.find((protocol) => protocol.id === effectiveSelectedProtocolId) ?? null,
@@ -122,6 +162,27 @@ export function RepeaterPage() {
     !form.formState.isDirty &&
     !isSavingProtocol;
 
+  const handlePause = useCallback((): void => {
+    pausedFromPhaseRef.current = timer.state.phase;
+
+    if (shouldRestartRepeaterForceStream(timer.state.phase)) {
+      void repeaterStream.stop();
+    }
+
+    timer.pause();
+  }, [repeaterStream, timer]);
+
+  const handleResume = useCallback((): void => {
+    const pausedFromPhase = pausedFromPhaseRef.current;
+    pausedFromPhaseRef.current = null;
+
+    if (deviceStatus.isConnected && pausedFromPhase && shouldRestartRepeaterForceStream(pausedFromPhase)) {
+      void repeaterStream.start({ reset: false });
+    }
+
+    timer.resume();
+  }, [deviceStatus.isConnected, repeaterStream, timer]);
+
   useEffect(() => {
     if (!selectedProtocol) {
       return;
@@ -136,16 +197,20 @@ export function RepeaterPage() {
     }
 
     reconnectPausedTimerRef.current = true;
-    timer.pause();
+    handlePause();
     toast.error("BLE connection lost. Pausing the repeater timer while the app reconnects.");
-  }, [hasSessionStarted, isReconnecting, timer, timer.state.phase]);
+  }, [handlePause, hasSessionStarted, isReconnecting, timer.state.phase]);
 
   useEffect(() => {
     if (!reconnectPausedTimerRef.current || !reconnectionFailed || !hasSessionStarted) {
       return;
     }
 
-    setConnectionFailureDialogOpen(true);
+    const timeoutId = window.setTimeout(() => {
+      setConnectionFailureDialogOpen(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [hasSessionStarted, reconnectionFailed]);
 
   useEffect(() => {
@@ -157,11 +222,15 @@ export function RepeaterPage() {
       return;
     }
 
-    reconnectPausedTimerRef.current = false;
-    setConnectionFailureDialogOpen(false);
-    timer.resume();
-    toast.success("BLE reconnected. Resuming the repeater timer.");
-  }, [deviceStatus.isConnected, isReconnecting, stopDialogOpen, timer, timer.state.phase]);
+    const timeoutId = window.setTimeout(() => {
+      reconnectPausedTimerRef.current = false;
+      setConnectionFailureDialogOpen(false);
+      handleResume();
+      toast.success("BLE reconnected. Resuming the repeater timer.");
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [deviceStatus.isConnected, handleResume, isReconnecting, stopDialogOpen, timer.state.phase]);
 
   async function handleProtocolSave(values: ProtocolFormValues): Promise<void> {
     if (!selectedProtocol) {
@@ -210,6 +279,11 @@ export function RepeaterPage() {
 
     resumeAudioContext();
     clearReconnectPauseTracking();
+    pausedFromPhaseRef.current = null;
+    repeaterStream.resetSamples();
+    if (deviceStatus.isConnected) {
+      void repeaterStream.start();
+    }
     timer.start(timerProtocol, startingHand);
   }
 
@@ -229,12 +303,15 @@ export function RepeaterPage() {
 
   function handleStopAction(): void {
     if (!requiresStopConfirmation) {
+      pausedFromPhaseRef.current = null;
+      void repeaterStream.stop();
+      repeaterStream.resetSamples();
       timer.stop();
       return;
     }
 
     if (!isPaused) {
-      timer.pause();
+      handlePause();
       setStopDialogPausedTimer(true);
     } else {
       setStopDialogPausedTimer(false);
@@ -247,7 +324,7 @@ export function RepeaterPage() {
     setStopDialogOpen(open);
 
     if (!open && stopDialogPausedTimer && timer.state.phase === TimerPhase.Paused) {
-      timer.resume();
+      handleResume();
     }
 
     if (!open) {
@@ -257,6 +334,9 @@ export function RepeaterPage() {
 
   function handleStopConfirm(): void {
     clearReconnectPauseTracking();
+    pausedFromPhaseRef.current = null;
+    void repeaterStream.stop();
+    repeaterStream.resetSamples();
     timer.stop();
     setStopDialogPausedTimer(false);
     setStopDialogOpen(false);
@@ -273,6 +353,9 @@ export function RepeaterPage() {
 
   function handleAbortAfterReconnectFailure(): void {
     clearReconnectPauseTracking();
+    pausedFromPhaseRef.current = null;
+    void repeaterStream.stop();
+    repeaterStream.resetSamples();
     timer.stop();
     toast.error("Repeater session aborted after the BLE reconnect window expired.");
   }
@@ -295,13 +378,13 @@ export function RepeaterPage() {
           ) : null}
 
           {isSessionRunning && !isPaused ? (
-            <Button variant="outline" onClick={timer.pause}>
+            <Button variant="outline" onClick={handlePause}>
               Pause
             </Button>
           ) : null}
 
           {isPaused ? (
-            <Button variant="outline" onClick={timer.resume}>
+            <Button variant="outline" onClick={handleResume}>
               Resume
             </Button>
           ) : null}
@@ -392,12 +475,13 @@ export function RepeaterPage() {
 
               <div className="space-y-2">
                 <span className="text-sm font-medium">Starting Hand</span>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     type="button"
                     variant={startingHand === "left" ? "default" : "outline"}
                     onClick={() => setStartingHand("left")}
                     disabled={!canConfigure}
+                    className="w-20"
                   >
                     Left
                   </Button>
@@ -406,6 +490,7 @@ export function RepeaterPage() {
                     variant={startingHand === "right" ? "default" : "outline"}
                     onClick={() => setStartingHand("right")}
                     disabled={!canConfigure}
+                    className="w-20"
                   >
                     Right
                   </Button>
@@ -470,6 +555,46 @@ export function RepeaterPage() {
       ) : null}
 
       {hasSessionStarted ? <TimerDisplay state={timer.state} /> : null}
+
+      {showForceChart ? (
+        <Card className="gap-4 py-4">
+          <CardHeader className="px-4 pb-0">
+            <CardTitle>Live Force Stream</CardTitle>
+            <CardDescription>
+              {isPaused
+                ? "Live force stream paused. The chart remains visible until you resume."
+                : "Real-time Tindeq force data for the current repeater hand."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-4 pt-0">
+            {isWorkPhase ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Card className="gap-2 py-4">
+                  <CardHeader className="px-4 pb-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Current Force</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pt-0">
+                    <p className="text-2xl font-semibold">{repeaterStream.currentForceKg.toFixed(1)} kg</p>
+                  </CardContent>
+                </Card>
+                <Card className="gap-2 py-4">
+                  <CardHeader className="px-4 pb-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Peak Force</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pt-0">
+                    <p className="text-2xl font-semibold">{repeaterStream.peakForceKg.toFixed(1)} kg</p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+
+            <ForceChart
+              samples={repeaterStream.samples}
+              targetForceKg={targetForceKg}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {timer.state.phase === TimerPhase.HandSwitch ? (
         <p className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">

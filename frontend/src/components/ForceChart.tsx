@@ -12,6 +12,7 @@ interface ForceChartProps {
   samples: ForceSamplePoint[]
   windowSeconds?: number
   height?: number
+  targetForceKg?: number
 }
 
 type PlotData = [number[], number[]]
@@ -20,6 +21,8 @@ type ChartPalette = {
   axisLine: string
   gridLine: string
   seriesLine: string
+  targetLine: string
+  targetLabel: string
 }
 
 function getChartPalette(): ChartPalette {
@@ -31,6 +34,8 @@ function getChartPalette(): ChartPalette {
       axisLine: "#64748b",
       gridLine: "rgba(148, 163, 184, 0.25)",
       seriesLine: "#60a5fa",
+      targetLine: "#f59e0b",
+      targetLabel: "#fcd34d",
     };
   }
 
@@ -39,7 +44,43 @@ function getChartPalette(): ChartPalette {
     axisLine: "#94a3b8",
     gridLine: "rgba(100, 116, 139, 0.25)",
     seriesLine: "#2563eb",
+    targetLine: "#d97706",
+    targetLabel: "#92400e",
   };
+}
+
+function drawTargetLine(u: uPlot, targetForceKg: number, palette: ChartPalette): void {
+  if (!(targetForceKg > 0)) {
+    return;
+  }
+
+  const bboxTop = u.bbox.top;
+  const bboxBottom = bboxTop + u.bbox.height;
+  const yPosition = u.valToPos(targetForceKg, "y", true);
+
+  if (!Number.isFinite(yPosition) || yPosition < bboxTop || yPosition > bboxBottom) {
+    return;
+  }
+
+  const left = u.bbox.left;
+  const right = left + u.bbox.width;
+  const labelY = Math.max(bboxTop + 14, yPosition - 6);
+  const label = `Target ${targetForceKg.toFixed(1)} kg`;
+
+  u.ctx.save();
+  u.ctx.strokeStyle = palette.targetLine;
+  u.ctx.fillStyle = palette.targetLabel;
+  u.ctx.lineWidth = 1.5;
+  u.ctx.setLineDash([6, 4]);
+  u.ctx.beginPath();
+  u.ctx.moveTo(left, yPosition);
+  u.ctx.lineTo(right, yPosition);
+  u.ctx.stroke();
+  u.ctx.setLineDash([]);
+  u.ctx.font = "12px sans-serif";
+  u.ctx.textBaseline = "bottom";
+  u.ctx.fillText(label, left + 8, labelY);
+  u.ctx.restore();
 }
 
 function buildPlotData(samples: ForceSamplePoint[], windowSeconds: number): PlotData {
@@ -57,10 +98,15 @@ function buildPlotData(samples: ForceSamplePoint[], windowSeconds: number): Plot
   ];
 }
 
-export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceChartProps) {
+export function ForceChart({ samples, windowSeconds = 30, height = 320, targetForceKg }: ForceChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
+  const targetForceKgRef = useRef(targetForceKg);
   const data = useMemo(() => buildPlotData(samples, windowSeconds), [samples, windowSeconds]);
+
+  useEffect(() => {
+    targetForceKgRef.current = targetForceKg;
+  }, [targetForceKg]);
 
   useEffect(() => {
     if (!containerRef.current || plotRef.current) {
@@ -101,6 +147,13 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceC
         },
       ],
       legend: { show: false },
+      hooks: {
+        draw: [
+          (plot) => {
+            drawTargetLine(plot, targetForceKgRef.current ?? 0, palette);
+          },
+        ],
+      },
     };
 
     plotRef.current = new uPlot(options, data, container);
@@ -113,7 +166,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320 }: ForceC
 
   useEffect(() => {
     plotRef.current?.setData(data);
-  }, [data]);
+  }, [data, targetForceKg]);
 
   useEffect(() => {
     if (!containerRef.current || !plotRef.current) {

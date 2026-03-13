@@ -31,6 +31,17 @@ public sealed class LiveStreamService
     private int _sampleCount;
     private double _lastSampleTimestampSeconds;
 
+    public bool IsStreaming
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _state is LiveStreamState.Streaming;
+            }
+        }
+    }
+
     public LiveStreamService(
         IProgressorService progressorService,
         ILiveStreamNotifier notifier,
