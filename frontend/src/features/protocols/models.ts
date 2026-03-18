@@ -19,7 +19,6 @@ export type Protocol = RequiredNonNullable<ProtocolDto>
 
 export const protocolFieldNames: Array<keyof ProtocolInput> = [
   "name",
-  "maxWeightKg",
   "weightPercentage",
   "repsPerSet",
   "numberOfSets",
@@ -34,7 +33,6 @@ export const protocolFieldNames: Array<keyof ProtocolInput> = [
 
 export const defaultProtocolInput: ProtocolInput = {
   name: "",
-  maxWeightKg: 0,
   weightPercentage: 60,
   repsPerSet: 10,
   numberOfSets: 1,
@@ -50,7 +48,6 @@ export const defaultProtocolInput: ProtocolInput = {
 export function toProtocolInput(protocol: Protocol): ProtocolInput {
   const {
     name,
-    maxWeightKg,
     weightPercentage,
     repsPerSet,
     numberOfSets,
@@ -65,7 +62,6 @@ export function toProtocolInput(protocol: Protocol): ProtocolInput {
 
   return {
     name,
-    maxWeightKg,
     weightPercentage,
     repsPerSet,
     numberOfSets,

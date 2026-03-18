@@ -7,7 +7,6 @@
 export interface CreateProtocolRequest {
   /** @nullable */
   name?: string | null;
-  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;
@@ -34,7 +33,6 @@ export interface ProtocolDto {
   id?: string;
   /** @nullable */
   name?: string | null;
-  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;
@@ -45,7 +43,6 @@ export interface ProtocolDto {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
-  targetWeightKg?: number;
 }
 
 export interface ProtocolSummaryDto {
@@ -98,7 +95,6 @@ export interface SessionSummaryDto {
 export interface UpdateProtocolRequest {
   /** @nullable */
   name?: string | null;
-  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;

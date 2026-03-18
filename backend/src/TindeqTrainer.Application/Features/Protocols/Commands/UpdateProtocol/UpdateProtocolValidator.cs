@@ -25,9 +25,6 @@ public class UpdateProtocolValidator : AbstractValidator<UpdateProtocolCommand>
         RuleFor(x => x.WorkSeconds)
             .GreaterThan(0);
 
-        RuleFor(x => x.MaxWeightKg)
-            .GreaterThanOrEqualTo(0);
-
         RuleFor(x => x.RestSeconds)
             .GreaterThanOrEqualTo(0);
 

@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const protocolSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(150, "Name must be 150 characters or less."),
-  maxWeightKg: z.number().min(0, "Max weight must be 0 or greater."),
   weightPercentage: z.number().min(0, "Weight percentage must be at least 0.").max(100, "Weight percentage must be at most 100."),
   repsPerSet: z.number().int("Reps per set must be a whole number.").min(1, "Reps per set must be greater than 0."),
   numberOfSets: z.number().int("Number of sets must be a whole number.").min(1, "Number of sets must be greater than 0."),

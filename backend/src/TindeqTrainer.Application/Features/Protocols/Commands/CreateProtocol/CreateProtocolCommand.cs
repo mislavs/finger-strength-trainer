@@ -6,7 +6,6 @@ namespace TindeqTrainer.Application.Features.Protocols.Commands.CreateProtocol;
 
 public record CreateProtocolCommand(
     string Name,
-    double MaxWeightKg,
     double WeightPercentage,
     int RepsPerSet,
     int NumberOfSets,
@@ -24,7 +23,6 @@ public class CreateProtocolHandler(AppDbContext dbContext) : IRequestHandler<Cre
     {
         var protocol = Protocol.Create(
             request.Name,
-            request.MaxWeightKg,
             request.WeightPercentage,
             request.RepsPerSet,
             request.NumberOfSets,

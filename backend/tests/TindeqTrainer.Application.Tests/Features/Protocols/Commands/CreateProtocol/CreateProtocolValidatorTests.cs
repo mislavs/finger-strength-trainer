@@ -108,7 +108,6 @@ public class CreateProtocolValidatorTests
     }
 
     [Theory]
-    [InlineData("MaxWeightKg")]
     [InlineData("RestSeconds")]
     [InlineData("HandSwitchSeconds")]
     [InlineData("SetRestSeconds")]
@@ -118,7 +117,6 @@ public class CreateProtocolValidatorTests
         // Arrange
         var command = fieldName switch
         {
-            nameof(CreateProtocolCommand.MaxWeightKg) => CreateValidCommand() with { MaxWeightKg = -1 },
             nameof(CreateProtocolCommand.RestSeconds) => CreateValidCommand() with { RestSeconds = -1 },
             nameof(CreateProtocolCommand.HandSwitchSeconds) => CreateValidCommand() with { HandSwitchSeconds = -1 },
             nameof(CreateProtocolCommand.SetRestSeconds) => CreateValidCommand() with { SetRestSeconds = -1 },
@@ -137,7 +135,6 @@ public class CreateProtocolValidatorTests
     {
         return new CreateProtocolCommand(
             Name: "Protocol A",
-            MaxWeightKg: 40,
             WeightPercentage: 80,
             RepsPerSet: 6,
             NumberOfSets: 1,

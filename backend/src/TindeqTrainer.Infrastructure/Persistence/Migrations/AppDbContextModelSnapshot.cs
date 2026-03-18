@@ -17,6 +17,30 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
 
+            modelBuilder.Entity("TindeqTrainer.Domain.Entities.MaxWeightRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Hand")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("WeightKg")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Hand", "RecordedAt");
+
+                    b.ToTable("MaxWeightRecords");
+                });
+
             modelBuilder.Entity("TindeqTrainer.Domain.Entities.Protocol", b =>
                 {
                     b.Property<Guid>("Id")
@@ -33,9 +57,6 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
                         .HasColumnType("REAL");
 
                     b.Property<double>("HandSwitchSeconds")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("MaxWeightKg")
                         .HasColumnType("REAL");
 
                     b.Property<string>("Name")
@@ -73,7 +94,6 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
                             CountdownBeeps = true,
                             CountdownSeconds = 5.0,
                             HandSwitchSeconds = 30.0,
-                            MaxWeightKg = 0.0,
                             Name = "Max Repeaters 80%",
                             NumberOfSets = 1,
                             RepsPerSet = 6,
@@ -89,7 +109,6 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
                             CountdownBeeps = true,
                             CountdownSeconds = 5.0,
                             HandSwitchSeconds = 30.0,
-                            MaxWeightKg = 0.0,
                             Name = "Endurance 60%",
                             NumberOfSets = 1,
                             RepsPerSet = 10,
@@ -105,7 +124,6 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
                             CountdownBeeps = true,
                             CountdownSeconds = 5.0,
                             HandSwitchSeconds = 30.0,
-                            MaxWeightKg = 0.0,
                             Name = "Short Power 90%",
                             NumberOfSets = 1,
                             RepsPerSet = 4,

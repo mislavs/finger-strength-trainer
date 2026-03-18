@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -76,9 +76,6 @@ export function ProtocolFormPage() {
     }
   }
 
-  const maxWeightKg = useWatch({ control: form.control, name: "maxWeightKg" });
-  const weightPercentage = useWatch({ control: form.control, name: "weightPercentage" });
-  const targetWeight = (maxWeightKg * weightPercentage) / 100;
   const isSubmitting = createProtocol.isPending || updateProtocol.isPending;
 
   if (isEditMode && protocolQuery.isLoading) {
@@ -111,7 +108,6 @@ export function ProtocolFormPage() {
           <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
             <ProtocolFormSections
               form={form}
-              targetWeight={targetWeight}
               isSubmitting={isSubmitting}
               isEditMode={isEditMode}
               onCancel={() => navigate(appRoutes.repeaters)}

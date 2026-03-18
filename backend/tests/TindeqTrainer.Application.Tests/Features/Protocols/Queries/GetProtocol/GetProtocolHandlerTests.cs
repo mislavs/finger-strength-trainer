@@ -14,7 +14,6 @@ public class GetProtocolHandlerTests(IntegrationTestFactory factory) : Integrati
         // Arrange
         var protocol = Protocol.Create(
             name: "Lookup Protocol",
-            maxWeightKg: 42,
             weightPercentage: 75,
             repsPerSet: 5,
             numberOfSets: 2,
@@ -39,7 +38,7 @@ public class GetProtocolHandlerTests(IntegrationTestFactory factory) : Integrati
         result.RepsPerSet.Should().Be(5);
         result.NumberOfSets.Should().Be(2);
         result.SetRestSeconds.Should().Be(150);
-        result.TargetWeightKg.Should().Be(31.5);
+        result.WeightPercentage.Should().Be(75);
     }
 
     [Fact]

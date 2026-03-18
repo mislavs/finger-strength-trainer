@@ -15,7 +15,6 @@ public class UpdateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
         // Arrange
         var protocol = Protocol.Create(
             name: "Original",
-            maxWeightKg: 40,
             weightPercentage: 70,
             repsPerSet: 6,
             numberOfSets: 1,
@@ -32,7 +31,6 @@ public class UpdateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
         var command = new UpdateProtocolCommand(
             Id: protocol.Id,
             Name: "Updated",
-            MaxWeightKg: 50,
             WeightPercentage: 80,
             RepsPerSet: 8,
             NumberOfSets: 3,
@@ -53,7 +51,6 @@ public class UpdateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
             .FirstAsync(x => x.Id == protocol.Id, TestContext.Current.CancellationToken);
 
         updated.Name.Should().Be("Updated");
-        updated.MaxWeightKg.Should().Be(50);
         updated.WeightPercentage.Should().Be(80);
         updated.RepsPerSet.Should().Be(8);
         updated.NumberOfSets.Should().Be(3);
@@ -74,7 +71,6 @@ public class UpdateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
         var command = new UpdateProtocolCommand(
             Id: Guid.NewGuid(),
             Name: "Missing",
-            MaxWeightKg: 40,
             WeightPercentage: 70,
             RepsPerSet: 6,
             NumberOfSets: 1,

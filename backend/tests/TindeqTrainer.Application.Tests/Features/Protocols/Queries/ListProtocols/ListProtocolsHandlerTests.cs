@@ -13,8 +13,8 @@ public class ListProtocolsHandlerTests(IntegrationTestFactory factory) : Integra
         // Arrange
         var additionalProtocols = new[]
         {
-            Protocol.Create("Alpha Protocol", 30, 70, 4, 1, 6, 3, 20, 0, 3, false, false),
-            Protocol.Create("Zulu Protocol", 50, 85, 6, 2, 8, 4, 20, 120, 3, true, true)
+            Protocol.Create("Alpha Protocol", 70, 4, 1, 6, 3, 20, 0, 3, false, false),
+            Protocol.Create("Zulu Protocol", 85, 6, 2, 8, 4, 20, 120, 3, true, true)
         };
         await InsertMany(additionalProtocols);
 

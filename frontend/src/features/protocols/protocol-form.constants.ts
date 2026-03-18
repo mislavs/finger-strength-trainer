@@ -13,7 +13,6 @@ export interface NumericFieldDefinition {
 }
 
 export const protocolNumericFields: Record<NumericFieldName, NumericFieldDefinition> = {
-  maxWeightKg: { name: "maxWeightKg", label: "Max Weight (kg)", step: "0.1" },
   weightPercentage: { name: "weightPercentage", label: "Weight Percentage (%)", step: "0.1" },
   repsPerSet: { name: "repsPerSet", label: "Reps per hand", step: "1" },
   numberOfSets: { name: "numberOfSets", label: "Sets", step: "1" },
@@ -38,11 +37,6 @@ export const protocolNumericFields: Record<NumericFieldName, NumericFieldDefinit
     description: "Seconds before the timer starts.",
   },
 };
-
-export const weightFields: NumericFieldDefinition[] = [
-  protocolNumericFields.maxWeightKg,
-  protocolNumericFields.weightPercentage,
-];
 
 export const toggleFields: Array<{ name: ToggleFieldName; label: string; description: string }> = [
   {

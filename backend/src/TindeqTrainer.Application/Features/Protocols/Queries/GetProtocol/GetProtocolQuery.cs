@@ -17,7 +17,6 @@ public class GetProtocolHandler(AppDbContext dbContext) : IRequestHandler<GetPro
             .Select(x => new ProtocolDto(
                 x.Id,
                 x.Name,
-                x.MaxWeightKg,
                 x.WeightPercentage,
                 x.RepsPerSet,
                 x.NumberOfSets,
@@ -27,8 +26,7 @@ public class GetProtocolHandler(AppDbContext dbContext) : IRequestHandler<GetPro
                 x.SetRestSeconds,
                 x.CountdownSeconds,
                 x.AudioCues,
-                x.CountdownBeeps,
-                x.TargetWeightKg))
+                x.CountdownBeeps))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (protocol is null)

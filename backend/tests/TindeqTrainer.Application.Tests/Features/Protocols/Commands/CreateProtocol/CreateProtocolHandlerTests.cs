@@ -14,7 +14,6 @@ public class CreateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
         var handler = new CreateProtocolHandler(DbContext);
         var command = new CreateProtocolCommand(
             Name: "Custom 75%",
-            MaxWeightKg: 55,
             WeightPercentage: 75,
             RepsPerSet: 8,
             NumberOfSets: 2,
@@ -41,6 +40,6 @@ public class CreateProtocolHandlerTests(IntegrationTestFactory factory) : Integr
         protocol.RepsPerSet.Should().Be(8);
         protocol.NumberOfSets.Should().Be(2);
         protocol.SetRestSeconds.Should().Be(120);
-        protocol.TargetWeightKg.Should().Be(41.25);
+        protocol.WeightPercentage.Should().Be(75);
     }
 }

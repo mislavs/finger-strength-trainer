@@ -75,6 +75,7 @@ try
 
     app.MapHub<TrainingHub>("/hubs/training");
     app.MapDeviceEndpoints();
+    app.MapMaxWeightEndpoints();
     app.MapProtocolEndpoints();
     app.MapSessionEndpoints();
 

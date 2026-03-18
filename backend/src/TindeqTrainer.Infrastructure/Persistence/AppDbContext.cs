@@ -11,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
 
     public DbSet<Protocol> Protocols => Set<Protocol>();
 
+    public DbSet<MaxWeightRecord> MaxWeightRecords => Set<MaxWeightRecord>();
+
     public DbSet<Session> Sessions => Set<Session>();
 
     public DbSet<SessionSample> SessionSamples => Set<SessionSample>();
@@ -24,7 +26,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
             {
                 Id = MaxRepeatersProtocolId,
                 Name = "Max Repeaters 80%",
-                MaxWeightKg = 0d,
                 WeightPercentage = 80d,
                 RepsPerSet = 6,
                 NumberOfSets = 1,
@@ -40,7 +41,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
             {
                 Id = EnduranceProtocolId,
                 Name = "Endurance 60%",
-                MaxWeightKg = 0d,
                 WeightPercentage = 60d,
                 RepsPerSet = 10,
                 NumberOfSets = 1,
@@ -56,7 +56,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
             {
                 Id = ShortPowerProtocolId,
                 Name = "Short Power 90%",
-                MaxWeightKg = 0d,
                 WeightPercentage = 90d,
                 RepsPerSet = 4,
                 NumberOfSets = 1,

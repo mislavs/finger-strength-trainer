@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,8 +20,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentMaxWeights } from "@/features/max-weight/hooks";
 import { DeleteProtocolDialog } from "@/features/protocols/DeleteProtocolDialog";
-import { ProtocolFieldError, getProtocolFieldErrorMessage } from "@/features/protocols/ProtocolFieldControls";
+import { ProtocolFieldError, ProtocolNumberField, getProtocolFieldErrorMessage } from "@/features/protocols/ProtocolFieldControls";
+import { protocolNumericFields } from "@/features/protocols/protocol-form.constants";
 import { useProtocol, useProtocols, useUpdateProtocol } from "@/features/protocols/hooks";
 import { protocolFieldNames, toProtocolInput, type Protocol, type ProtocolInput, type ProtocolSummary } from "@/features/protocols/models";
 import { ProtocolFlowFields } from "@/features/protocols/ProtocolFlowFields";
@@ -35,6 +37,14 @@ import { useTimer } from "@/features/repeater/useTimer";
 import { appRoutes } from "@/lib/app-routes";
 
 const secondsPerMinute = 60;
+
+function toNonNegativeNumber(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function computeTargetWeightKg(maxWeightKg: number, weightPercentage: number): number {
+  return maxWeightKg * (weightPercentage / 100);
+}
 
 function shouldShowRepeaterForceChart(phase: TimerPhase): boolean {
   return phase === TimerPhase.Countdown
@@ -64,6 +74,7 @@ function toTimerProtocol(protocol: Protocol): TimerProtocol {
 export function RepeaterPage() {
   const protocolsQuery = useProtocols();
   const updateProtocol = useUpdateProtocol();
+  const currentMaxWeightsQuery = useCurrentMaxWeights();
   const { status: deviceStatus, isReconnecting, reconnectionFailed } = useDeviceStatus();
   const [selectedProtocolId, setSelectedProtocolId] = useState("");
   const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null);
@@ -72,6 +83,8 @@ export function RepeaterPage() {
   const [stopDialogPausedTimer, setStopDialogPausedTimer] = useState(false);
   const [connectionFailureDialogOpen, setConnectionFailureDialogOpen] = useState(false);
   const [startingHand, setStartingHand] = useState<TimerHand>("left");
+  const [sessionLeftMaxWeightKg, setSessionLeftMaxWeightKg] = useState<number | undefined>(undefined);
+  const [sessionRightMaxWeightKg, setSessionRightMaxWeightKg] = useState<number | undefined>(undefined);
   const reconnectPausedTimerRef = useRef(false);
   const pausedFromPhaseRef = useRef<TimerPhase | null>(null);
   const repeaterStream = useRepeaterStream();
@@ -97,7 +110,6 @@ export function RepeaterPage() {
     resolver: zodResolver(protocolSchema),
     defaultValues: {
       name: "",
-      maxWeightKg: 0,
       weightPercentage: 0,
       repsPerSet: 1,
       numberOfSets: 1,
@@ -110,6 +122,14 @@ export function RepeaterPage() {
       countdownBeeps: true,
     },
   });
+  const weightPercentage = useWatch({
+    control: form.control,
+    name: "weightPercentage",
+  });
+  const leftReferenceMaxWeightKg = toNonNegativeNumber(sessionLeftMaxWeightKg ?? currentMaxWeightsQuery.data?.leftKg);
+  const rightReferenceMaxWeightKg = toNonNegativeNumber(sessionRightMaxWeightKg ?? currentMaxWeightsQuery.data?.rightKg);
+  const leftTargetWeightKg = computeTargetWeightKg(leftReferenceMaxWeightKg, toNonNegativeNumber(weightPercentage));
+  const rightTargetWeightKg = computeTargetWeightKg(rightReferenceMaxWeightKg, toNonNegativeNumber(weightPercentage));
   const effectiveSelectedProtocolId = useMemo(() => {
     const protocols = protocolsQuery.data ?? [];
 
@@ -142,7 +162,12 @@ export function RepeaterPage() {
     && shouldShowRepeaterForceChart(timer.state.phase)
     && (deviceStatus.isConnected || hasForceSamples);
   const isWorkPhase = timer.state.phase === TimerPhase.Work;
-  const targetForceKg = isWorkPhase ? selectedProtocol?.targetWeightKg : undefined;
+  const activeHandReferenceMaxWeightKg = timer.state.currentHand === "right"
+    ? rightReferenceMaxWeightKg
+    : leftReferenceMaxWeightKg;
+  const targetForceKg = isWorkPhase && selectedProtocol
+    ? computeTargetWeightKg(activeHandReferenceMaxWeightKg, selectedProtocol.weightPercentage)
+    : undefined;
 
   const selectedProtocolSummary = useMemo(
     () => protocolsQuery.data?.find((protocol) => protocol.id === effectiveSelectedProtocolId) ?? null,
@@ -427,75 +452,119 @@ export function RepeaterPage() {
               <CardTitle>Session Setup</CardTitle>
               <CardDescription>Choose a protocol and the hand you want to start with.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="protocol-select">
-                    Protocol
-                  </label>
-
-                  {protocolsQuery.isLoading ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <select
-                      id="protocol-select"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={effectiveSelectedProtocolId}
-                      onChange={(event) => setSelectedProtocolId(event.target.value)}
-                      disabled={!canConfigure}
-                    >
-                      {protocolsQuery.data?.map((protocol) => (
-                        <option key={protocol.id} value={protocol.id}>
-                          {protocol.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild type="button" variant="outline" size="sm">
-                    <Link to={appRoutes.protocolsNew}>
-                      <Plus className="size-4" />
-                      New Protocol
-                    </Link>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={!selectedProtocolSummary}
-                    onClick={() => selectedProtocolSummary && setProtocolToDelete(selectedProtocolSummary)}
-                  >
-                    <Trash2 className="size-4" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-
+            <CardContent className="space-y-5">
               <div className="space-y-2">
-                <span className="text-sm font-medium">Starting Hand</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={startingHand === "left" ? "default" : "outline"}
-                    onClick={() => setStartingHand("left")}
-                    disabled={!canConfigure}
-                    className="w-20"
-                  >
-                    Left
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={startingHand === "right" ? "default" : "outline"}
-                    onClick={() => setStartingHand("right")}
-                    disabled={!canConfigure}
-                    className="w-20"
-                  >
-                    Right
-                  </Button>
+                <div className="flex items-end gap-3">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <label className="text-sm font-medium" htmlFor="protocol-select">
+                      Protocol
+                    </label>
+
+                    {protocolsQuery.isLoading ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <select
+                        id="protocol-select"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={effectiveSelectedProtocolId}
+                        onChange={(event) => setSelectedProtocolId(event.target.value)}
+                        disabled={!canConfigure}
+                      >
+                        {protocolsQuery.data?.map((protocol) => (
+                          <option key={protocol.id} value={protocol.id}>
+                            {protocol.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 gap-2">
+                    <Button asChild type="button" variant="outline" size="sm">
+                      <Link to={appRoutes.protocolsNew}>
+                        <Plus className="size-4" />
+                        New
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={!selectedProtocolSummary}
+                      onClick={() => selectedProtocolSummary && setProtocolToDelete(selectedProtocolSummary)}
+                    >
+                      <Trash2 className="size-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Starting Hand</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={startingHand === "left" ? "default" : "outline"}
+                      onClick={() => setStartingHand("left")}
+                      disabled={!canConfigure}
+                      size="sm"
+                    >
+                      Left
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={startingHand === "right" ? "default" : "outline"}
+                      onClick={() => setStartingHand("right")}
+                      disabled={!canConfigure}
+                      size="sm"
+                    >
+                      Right
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="session-left-max-weight">Left Max (kg)</Label>
+                  <Input
+                    id="session-left-max-weight"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={String(toNonNegativeNumber(currentMaxWeightsQuery.data?.leftKg))}
+                    value={sessionLeftMaxWeightKg ?? ""}
+                    onChange={(event) => {
+                      const raw = event.target.valueAsNumber;
+                      setSessionLeftMaxWeightKg(Number.isFinite(raw) ? toNonNegativeNumber(raw) : undefined);
+                    }}
+                    disabled={!canConfigure}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="session-right-max-weight">Right Max (kg)</Label>
+                  <Input
+                    id="session-right-max-weight"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={String(toNonNegativeNumber(currentMaxWeightsQuery.data?.rightKg))}
+                    value={sessionRightMaxWeightKg ?? ""}
+                    onChange={(event) => {
+                      const raw = event.target.valueAsNumber;
+                      setSessionRightMaxWeightKg(Number.isFinite(raw) ? toNonNegativeNumber(raw) : undefined);
+                    }}
+                    disabled={!canConfigure}
+                  />
+                </div>
+              </div>
+
+              {currentMaxWeightsQuery.isError ? (
+                <p className="text-sm text-destructive">
+                  Failed to load the latest recorded max weights. You can still override them manually here.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -528,6 +597,19 @@ export function RepeaterPage() {
                     />
                     <ProtocolFieldError message={getProtocolFieldErrorMessage(form.formState.errors.name?.message)} />
                   </div>
+
+                  <section className="space-y-3">
+                    <h2 className="font-medium">Load</h2>
+                    <ProtocolNumberField
+                      form={form}
+                      field={protocolNumericFields.weightPercentage}
+                      disabled={!canConfigure || isSavingProtocol}
+                      description="Percent of your current per-hand max weight."
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Target Weight: {leftTargetWeightKg.toFixed(1)} kg left / {rightTargetWeightKg.toFixed(1)} kg right
+                    </p>
+                  </section>
 
                   <ProtocolFlowFields form={form} disabled={!canConfigure || isSavingProtocol} />
 
@@ -591,6 +673,7 @@ export function RepeaterPage() {
             <ForceChart
               samples={repeaterStream.samples}
               targetForceKg={targetForceKg}
+              windowSeconds={10}
             />
           </CardContent>
         </Card>

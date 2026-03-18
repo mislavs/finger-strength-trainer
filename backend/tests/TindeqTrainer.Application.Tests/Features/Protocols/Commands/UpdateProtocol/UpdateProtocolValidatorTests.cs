@@ -121,7 +121,6 @@ public class UpdateProtocolValidatorTests
     }
 
     [Theory]
-    [InlineData("MaxWeightKg")]
     [InlineData("RestSeconds")]
     [InlineData("HandSwitchSeconds")]
     [InlineData("SetRestSeconds")]
@@ -131,7 +130,6 @@ public class UpdateProtocolValidatorTests
         // Arrange
         var command = fieldName switch
         {
-            nameof(UpdateProtocolCommand.MaxWeightKg) => CreateValidCommand() with { MaxWeightKg = -1 },
             nameof(UpdateProtocolCommand.RestSeconds) => CreateValidCommand() with { RestSeconds = -1 },
             nameof(UpdateProtocolCommand.HandSwitchSeconds) => CreateValidCommand() with { HandSwitchSeconds = -1 },
             nameof(UpdateProtocolCommand.SetRestSeconds) => CreateValidCommand() with { SetRestSeconds = -1 },
@@ -151,7 +149,6 @@ public class UpdateProtocolValidatorTests
         return new UpdateProtocolCommand(
             Id: Guid.NewGuid(),
             Name: "Protocol A",
-            MaxWeightKg: 40,
             WeightPercentage: 80,
             RepsPerSet: 6,
             NumberOfSets: 1,

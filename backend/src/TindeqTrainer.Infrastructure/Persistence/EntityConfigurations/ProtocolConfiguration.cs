@@ -14,9 +14,6 @@ public class ProtocolConfiguration : IEntityTypeConfiguration<Protocol>
             .HasMaxLength(150)
             .IsRequired();
 
-        builder.Property(p => p.MaxWeightKg)
-            .IsRequired();
-
         builder.Property(p => p.WeightPercentage)
             .IsRequired();
 

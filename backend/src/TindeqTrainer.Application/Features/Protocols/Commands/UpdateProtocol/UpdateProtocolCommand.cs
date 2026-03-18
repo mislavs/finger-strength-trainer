@@ -8,7 +8,6 @@ namespace TindeqTrainer.Application.Features.Protocols.Commands.UpdateProtocol;
 public record UpdateProtocolCommand(
     Guid Id,
     string Name,
-    double MaxWeightKg,
     double WeightPercentage,
     int RepsPerSet,
     int NumberOfSets,
@@ -34,7 +33,6 @@ public class UpdateProtocolHandler(AppDbContext dbContext) : IRequestHandler<Upd
 
         protocol.Update(
             request.Name,
-            request.MaxWeightKg,
             request.WeightPercentage,
             request.RepsPerSet,
             request.NumberOfSets,

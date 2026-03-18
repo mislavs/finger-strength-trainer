@@ -22,7 +22,6 @@ type ChartPalette = {
   gridLine: string
   seriesLine: string
   targetLine: string
-  targetLabel: string
 }
 
 function getChartPalette(): ChartPalette {
@@ -35,7 +34,6 @@ function getChartPalette(): ChartPalette {
       gridLine: "rgba(148, 163, 184, 0.25)",
       seriesLine: "#60a5fa",
       targetLine: "#f59e0b",
-      targetLabel: "#fcd34d",
     };
   }
 
@@ -45,7 +43,6 @@ function getChartPalette(): ChartPalette {
     gridLine: "rgba(100, 116, 139, 0.25)",
     seriesLine: "#2563eb",
     targetLine: "#d97706",
-    targetLabel: "#92400e",
   };
 }
 
@@ -64,22 +61,15 @@ function drawTargetLine(u: uPlot, targetForceKg: number, palette: ChartPalette):
 
   const left = u.bbox.left;
   const right = left + u.bbox.width;
-  const labelY = Math.max(bboxTop + 14, yPosition - 6);
-  const label = `Target ${targetForceKg.toFixed(1)} kg`;
 
   u.ctx.save();
   u.ctx.strokeStyle = palette.targetLine;
-  u.ctx.fillStyle = palette.targetLabel;
   u.ctx.lineWidth = 1.5;
   u.ctx.setLineDash([6, 4]);
   u.ctx.beginPath();
   u.ctx.moveTo(left, yPosition);
   u.ctx.lineTo(right, yPosition);
   u.ctx.stroke();
-  u.ctx.setLineDash([]);
-  u.ctx.font = "12px sans-serif";
-  u.ctx.textBaseline = "bottom";
-  u.ctx.fillText(label, left + 8, labelY);
   u.ctx.restore();
 }
 
@@ -96,6 +86,21 @@ function buildPlotData(samples: ForceSamplePoint[], windowSeconds: number): Plot
     visibleSamples.map((sample) => sample.timestampSeconds),
     visibleSamples.map((sample) => sample.weightKg),
   ];
+}
+
+function yRange(targetRef: React.RefObject<number | undefined>): uPlot.Scale.Range {
+  return (_plot, dataMin, dataMax) => {
+    const target = targetRef.current;
+    const lo = Math.min(dataMin ?? 0, 0);
+    const hi = Math.max(dataMax ?? 1, 1);
+
+    if (typeof target !== "number" || !Number.isFinite(target) || target <= 0) {
+      return [lo, hi];
+    }
+
+    const headroom = target * 0.15;
+    return [lo, Math.max(hi, target + headroom)];
+  };
 }
 
 export function ForceChart({ samples, windowSeconds = 30, height = 320, targetForceKg }: ForceChartProps) {
@@ -121,6 +126,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
       height,
       scales: {
         x: { time: false },
+        y: { range: yRange(targetForceKgRef) },
       },
       axes: [
         {

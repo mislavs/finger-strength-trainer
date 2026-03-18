@@ -10,8 +10,6 @@ public class Protocol
 
     public string Name { get; private set; } = string.Empty;
 
-    public double MaxWeightKg { get; private set; }
-
     public double WeightPercentage { get; private set; }
 
     public int RepsPerSet { get; private set; }
@@ -32,11 +30,8 @@ public class Protocol
 
     public bool CountdownBeeps { get; private set; }
 
-    public double TargetWeightKg => MaxWeightKg * (WeightPercentage / 100.0);
-
     public static Protocol Create(
         string name,
-        double maxWeightKg,
         double weightPercentage,
         int repsPerSet,
         int numberOfSets,
@@ -51,7 +46,6 @@ public class Protocol
     {
         var normalizedName = ValidateAndNormalize(
             name,
-            maxWeightKg,
             weightPercentage,
             repsPerSet,
             numberOfSets,
@@ -65,7 +59,6 @@ public class Protocol
         {
             Id = id ?? Guid.NewGuid(),
             Name = normalizedName,
-            MaxWeightKg = maxWeightKg,
             WeightPercentage = weightPercentage,
             RepsPerSet = repsPerSet,
             NumberOfSets = numberOfSets,
@@ -81,7 +74,6 @@ public class Protocol
 
     public void Update(
         string name,
-        double maxWeightKg,
         double weightPercentage,
         int repsPerSet,
         int numberOfSets,
@@ -95,7 +87,6 @@ public class Protocol
     {
         var normalizedName = ValidateAndNormalize(
             name,
-            maxWeightKg,
             weightPercentage,
             repsPerSet,
             numberOfSets,
@@ -106,7 +97,6 @@ public class Protocol
             countdownSeconds);
 
         Name = normalizedName;
-        MaxWeightKg = maxWeightKg;
         WeightPercentage = weightPercentage;
         RepsPerSet = repsPerSet;
         NumberOfSets = numberOfSets;
@@ -121,7 +111,6 @@ public class Protocol
 
     private static string ValidateAndNormalize(
         string name,
-        double maxWeightKg,
         double weightPercentage,
         int repsPerSet,
         int numberOfSets,
@@ -146,11 +135,6 @@ public class Protocol
         if (numberOfSets <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(numberOfSets), "Number of sets must be greater than zero.");
-        }
-
-        if (maxWeightKg < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxWeightKg), "Max weight must be non-negative.");
         }
 
         if (workSeconds <= 0)

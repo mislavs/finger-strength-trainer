@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
+  protocolNumericFields,
   toggleFields,
-  weightFields,
 } from "@/features/protocols/protocol-form.constants";
 import {
   ProtocolFieldError,
@@ -20,7 +20,6 @@ import type { ProtocolFormValues } from "@/features/protocols/schema";
 
 interface ProtocolFormSectionsProps {
   form: UseFormReturn<ProtocolFormValues>
-  targetWeight: number
   isSubmitting: boolean
   isEditMode: boolean
   onCancel: () => void
@@ -28,7 +27,6 @@ interface ProtocolFormSectionsProps {
 
 export function ProtocolFormSections({
   form,
-  targetWeight,
   isSubmitting,
   isEditMode,
   onCancel,
@@ -47,13 +45,12 @@ export function ProtocolFormSections({
       <Separator />
 
       <section className="space-y-3">
-        <h2 className="font-medium">Load</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {weightFields.map((field) => (
-            <ProtocolNumberField key={field.name} form={form} field={field} />
-          ))}
-        </div>
-        <p className="text-sm text-muted-foreground">Target Weight: {Number.isFinite(targetWeight) ? targetWeight.toFixed(1) : "0.0"} kg</p>
+        <h2 className="font-medium">Intensity</h2>
+        <ProtocolNumberField
+          form={form}
+          field={protocolNumericFields.weightPercentage}
+          description="Percent of your current max weight. The per-hand target is calculated during sessions."
+        />
       </section>
 
       <Separator />

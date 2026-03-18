@@ -2,7 +2,6 @@ namespace TindeqTrainer.Api.Contracts;
 
 public record CreateProtocolRequest(
     string Name,
-    double MaxWeightKg,
     double WeightPercentage,
     int RepsPerSet,
     int NumberOfSets,

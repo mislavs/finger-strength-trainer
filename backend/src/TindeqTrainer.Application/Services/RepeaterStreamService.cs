@@ -7,7 +7,7 @@ namespace TindeqTrainer.Application.Services;
 
 public sealed class RepeaterStreamService
 {
-    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(25);
 
     private readonly IProgressorService _progressorService;
     private readonly ILiveStreamNotifier _notifier;

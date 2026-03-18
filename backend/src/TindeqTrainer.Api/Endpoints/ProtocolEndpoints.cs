@@ -67,7 +67,6 @@ public static class ProtocolEndpoints
         var protocolId = await sender.Send(
             new CreateProtocolCommand(
                 request.Name,
-                request.MaxWeightKg,
                 request.WeightPercentage,
                 request.RepsPerSet,
                 request.NumberOfSets,
@@ -93,7 +92,6 @@ public static class ProtocolEndpoints
             new UpdateProtocolCommand(
                 id,
                 request.Name,
-                request.MaxWeightKg,
                 request.WeightPercentage,
                 request.RepsPerSet,
                 request.NumberOfSets,

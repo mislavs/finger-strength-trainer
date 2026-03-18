@@ -15,7 +15,6 @@ public class DeleteProtocolHandlerTests(IntegrationTestFactory factory) : Integr
         // Arrange
         var protocol = Protocol.Create(
             name: "To Delete",
-            maxWeightKg: 35,
             weightPercentage: 65,
             repsPerSet: 6,
             numberOfSets: 1,
