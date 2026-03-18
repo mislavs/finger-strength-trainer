@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteSessionDialog } from "@/features/history/DeleteSessionDialog";
 import { useSession } from "@/features/history/hooks";
 import { appRoutes } from "@/lib/app-routes";
+import { formatDateTime } from "@/lib/utils";
 
 function formatDuration(seconds: number): string {
   const roundedSeconds = Math.max(0, Math.round(seconds));
@@ -73,7 +74,7 @@ export function SessionDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Session Detail</h1>
-          <p className="text-sm text-muted-foreground">{new Date(session.date).toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground">{formatDateTime(session.date)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">

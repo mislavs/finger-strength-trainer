@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useCreateMaxWeightRecord, useCurrentMaxWeights, useMaxWeightHistory } from "@/features/max-weight/hooks";
 import type { MaxWeightHand } from "@/features/max-weight/models";
 import { ApiClientError } from "@/lib/api-client";
+import { formatDateTime } from "@/lib/utils";
 
 function formatWeight(value: number | null | undefined): string {
   return typeof value === "number" && Number.isFinite(value) ? `${value.toFixed(1)} kg` : "Not recorded";
@@ -151,7 +152,7 @@ export function MaxWeightPage() {
                 {historyQuery.data?.length ? (
                   historyQuery.data.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell>{new Date(record.recordedAt).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTime(record.recordedAt)}</TableCell>
                       <TableCell>{record.hand}</TableCell>
                       <TableCell>{record.weightKg.toFixed(1)} kg</TableCell>
                     </TableRow>

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useDeleteSession } from "@/features/history/hooks";
 import type { SessionSummary } from "@/features/history/models";
+import { formatDateTime } from "@/lib/utils";
 
 interface DeleteSessionDialogProps {
   session: SessionSummary | null
@@ -33,7 +34,7 @@ export function DeleteSessionDialog({ session, open, onOpenChange, onDeleted }: 
     onDeleted?.();
   }
 
-  const sessionLabel = session ? `${new Date(session.date).toLocaleString()} (${session.protocolName})` : "this session";
+  const sessionLabel = session ? `${formatDateTime(session.date)} (${session.protocolName})` : "this session";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

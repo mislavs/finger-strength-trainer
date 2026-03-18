@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ForceSamplePoint } from "@/components/ForceChart";
 import { useSignalR } from "@/hooks/useSignalR";
@@ -26,7 +26,7 @@ interface UseLiveStreamResult {
 
 type LiveStreamCommand = "StartLiveStream" | "StopLiveStream" | "SaveLiveStream" | "DiscardLiveStream"
 
-const maxRenderedSamples = 600;
+const defaultWindowSeconds = 10;
 const initialStats: LiveStatsSnapshot = {
   currentForceKg: 0,
   peakForceKg: 0,
@@ -34,13 +34,18 @@ const initialStats: LiveStatsSnapshot = {
   avgForceKg: null,
 };
 
-function appendRollingSamples(current: ForceSamplePoint[], incoming: ForceSamplePoint[]): ForceSamplePoint[] {
+function appendRollingSamples(
+  current: ForceSamplePoint[],
+  incoming: ForceSamplePoint[],
+  windowSeconds: number,
+): ForceSamplePoint[] {
   const merged = [...current, ...incoming];
-  if (merged.length <= maxRenderedSamples) {
-    return merged;
-  }
+  if (merged.length === 0) return merged;
 
-  return merged.slice(merged.length - maxRenderedSamples);
+  const cutoff = merged[merged.length - 1].timestampSeconds - windowSeconds;
+  const firstVisible = merged.findIndex((s) => s.timestampSeconds >= cutoff);
+  if (firstVisible <= 0) return merged;
+  return merged.slice(firstVisible);
 }
 
 export function useLiveStream(): UseLiveStreamResult {
@@ -51,6 +56,16 @@ export function useLiveStream(): UseLiveStreamResult {
   const [streamState, setStreamState] = useState<LiveStreamState>("idle");
   const [activeCommand, setActiveCommand] = useState<LiveStreamCommand | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pendingSamplesRef = useRef<ForceSamplePoint[]>([]);
+  const rafIdRef = useRef(0);
+
+  const cancelPendingFrame = useCallback(() => {
+    if (rafIdRef.current !== 0) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
+    pendingSamplesRef.current = [];
+  }, []);
 
   useEffect(() => {
     const onForceSamples = (incomingSamples: ForceSamplePoint[]) => {
@@ -58,20 +73,31 @@ export function useLiveStream(): UseLiveStreamResult {
         return;
       }
 
-      setStreamState("streaming");
-      setError(null);
-      setSamples((currentSamples) => appendRollingSamples(currentSamples, incomingSamples));
-      setStats((currentStats) => {
-        const latest = incomingSamples[incomingSamples.length - 1];
-        const incomingPeak = incomingSamples.reduce((peak, sample) => Math.max(peak, sample.weightKg), 0);
+      pendingSamplesRef.current.push(...incomingSamples);
 
-        return {
-          currentForceKg: latest.weightKg,
-          peakForceKg: Math.max(currentStats.peakForceKg, incomingPeak),
-          durationSeconds: Math.max(currentStats.durationSeconds, latest.timestampSeconds),
-          avgForceKg: currentStats.avgForceKg,
-        };
-      });
+      if (rafIdRef.current === 0) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = 0;
+          const pending = pendingSamplesRef.current;
+          pendingSamplesRef.current = [];
+
+          setStreamState("streaming");
+          setError(null);
+          setSamples((current) => appendRollingSamples(current, pending, defaultWindowSeconds));
+          setStats((currentStats) => {
+            const latest = pending[pending.length - 1];
+            const incomingPeak = pending.reduce(
+              (peak, s) => Math.max(peak, s.weightKg), 0);
+
+            return {
+              currentForceKg: latest.weightKg,
+              peakForceKg: Math.max(currentStats.peakForceKg, incomingPeak),
+              durationSeconds: Math.max(currentStats.durationSeconds, latest.timestampSeconds),
+              avgForceKg: currentStats.avgForceKg,
+            };
+          });
+        });
+      }
     };
 
     const onLiveStreamStopped = (nextStats: LiveStreamStoppedStats) => {
@@ -92,8 +118,9 @@ export function useLiveStream(): UseLiveStreamResult {
     return () => {
       connection.off("ForceSamples", onForceSamples);
       connection.off("LiveStreamStopped", onLiveStreamStopped);
+      cancelPendingFrame();
     };
-  }, [connection]);
+  }, [connection, cancelPendingFrame]);
 
   const runCommand = useCallback(
     async (command: LiveStreamCommand): Promise<boolean> => {
@@ -147,6 +174,7 @@ export function useLiveStream(): UseLiveStreamResult {
   );
 
   const start = useCallback(async () => {
+    cancelPendingFrame();
     setSamples([]);
     setStats(initialStats);
     setStoppedStats(null);
@@ -157,7 +185,7 @@ export function useLiveStream(): UseLiveStreamResult {
     }
 
     setStreamState("streaming");
-  }, [runCommand]);
+  }, [cancelPendingFrame, runCommand]);
 
   const stop = useCallback(async () => {
     const succeeded = await runCommand("StopLiveStream");
@@ -174,12 +202,13 @@ export function useLiveStream(): UseLiveStreamResult {
       return null;
     }
 
+    cancelPendingFrame();
     setStreamState("idle");
     setSamples([]);
     setStats(initialStats);
     setStoppedStats(null);
     return sessionId;
-  }, [runCommandWithResult]);
+  }, [cancelPendingFrame, runCommandWithResult]);
 
   const discard = useCallback(async () => {
     const succeeded = await runCommand("DiscardLiveStream");
@@ -187,11 +216,12 @@ export function useLiveStream(): UseLiveStreamResult {
       return;
     }
 
+    cancelPendingFrame();
     setStreamState("idle");
     setSamples([]);
     setStats(initialStats);
     setStoppedStats(null);
-  }, [runCommand]);
+  }, [cancelPendingFrame, runCommand]);
 
   return useMemo(
     () => ({

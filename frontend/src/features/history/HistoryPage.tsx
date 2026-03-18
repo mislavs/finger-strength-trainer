@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSessions } from "@/features/history/hooks";
 import { appRoutes } from "@/lib/app-routes";
+import { formatDateTime } from "@/lib/utils";
 
 function HistoryTableSkeleton() {
   return (
@@ -64,7 +65,7 @@ export function HistoryPage() {
                       <TableRow key={session.id}>
                         <TableCell className="font-medium">
                           <Link className="hover:underline" to={detailPath}>
-                            {new Date(session.date).toLocaleString()}
+                            {formatDateTime(session.date)}
                           </Link>
                         </TableCell>
                         <TableCell>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import uPlot from "uplot";
 
 import "uplot/dist/uPlot.min.css";
@@ -107,14 +107,17 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
   const containerRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
   const targetForceKgRef = useRef(targetForceKg);
-  const data = useMemo(() => buildPlotData(samples, windowSeconds), [samples, windowSeconds]);
+  const samplesRef = useRef(samples);
+  const windowSecondsRef = useRef(windowSeconds);
+  const rafIdRef = useRef(0);
+  const lastRenderedRef = useRef<ForceSamplePoint[] | null>(null);
+
+  samplesRef.current = samples;
+  windowSecondsRef.current = windowSeconds;
+  targetForceKgRef.current = targetForceKg;
 
   useEffect(() => {
-    targetForceKgRef.current = targetForceKg;
-  }, [targetForceKg]);
-
-  useEffect(() => {
-    if (!containerRef.current || plotRef.current) {
+    if (!containerRef.current) {
       return;
     }
 
@@ -150,6 +153,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
           label: "Force",
           stroke: palette.seriesLine,
           width: 2,
+          paths: uPlot.paths.spline!(),
         },
       ],
       legend: { show: false },
@@ -162,34 +166,51 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
       },
     };
 
-    plotRef.current = new uPlot(options, data, container);
+    const plot = new uPlot(options, [[], []], container);
+    plotRef.current = plot;
 
-    return () => {
-      plotRef.current?.destroy();
-      plotRef.current = null;
+    let latestDataTimestamp = 0;
+    let anchorWallTime = 0;
+
+    const tick = () => {
+      const currentSamples = samplesRef.current;
+      const ws = windowSecondsRef.current;
+
+      if (currentSamples !== lastRenderedRef.current) {
+        lastRenderedRef.current = currentSamples;
+        latestDataTimestamp = currentSamples.length > 0
+          ? currentSamples[currentSamples.length - 1].timestampSeconds
+          : 0;
+        anchorWallTime = performance.now();
+        plot.setData(buildPlotData(currentSamples, ws));
+      }
+
+      if (latestDataTimestamp > 0) {
+        const elapsedSeconds = (performance.now() - anchorWallTime) / 1000;
+        const rightEdge = elapsedSeconds < 0.25
+          ? latestDataTimestamp + elapsedSeconds
+          : latestDataTimestamp;
+        plot.setScale("x", { min: rightEdge - ws, max: rightEdge });
+      }
+
+      rafIdRef.current = requestAnimationFrame(tick);
     };
-  }, [data, height]);
+    rafIdRef.current = requestAnimationFrame(tick);
 
-  useEffect(() => {
-    plotRef.current?.setData(data);
-  }, [data, targetForceKg]);
-
-  useEffect(() => {
-    if (!containerRef.current || !plotRef.current) {
-      return;
-    }
-
-    const container = containerRef.current;
     const resizeObserver = new ResizeObserver((entries) => {
       const nextWidth = Math.max(320, Math.floor(entries[0].contentRect.width));
-      plotRef.current?.setSize({
-        width: nextWidth,
-        height,
-      });
+      plot.setSize({ width: nextWidth, height });
     });
-
     resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
+
+    return () => {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+      lastRenderedRef.current = null;
+      resizeObserver.disconnect();
+      plot.destroy();
+      plotRef.current = null;
+    };
   }, [height]);
 
   return <div ref={containerRef} className="w-full rounded-md border bg-card p-2" />;

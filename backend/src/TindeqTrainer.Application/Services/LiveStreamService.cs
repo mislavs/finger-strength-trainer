@@ -21,6 +21,7 @@ public sealed class LiveStreamService
     private readonly ConcurrentQueue<ForceSample> _rawSamples = new();
     private readonly ConcurrentQueue<ForceSample> _pendingSamples = new();
     private readonly SemaphoreSlim _flushLock = new(1, 1);
+    private readonly List<ForceSample> _flushBatch = new();
     private Timer? _flushTimer;
 
     private LiveStreamState _state = LiveStreamState.Idle;
@@ -307,27 +308,14 @@ public sealed class LiveStreamService
                 return;
             }
 
-            var count = 0;
-            double summedWeight = 0;
-            double latestTimestamp = 0;
-
+            _flushBatch.Clear();
             while (_pendingSamples.TryDequeue(out var sample))
-            {
-                count++;
-                summedWeight += sample.WeightKg;
-                latestTimestamp = sample.TimestampSeconds;
-            }
+                _flushBatch.Add(sample);
 
-            if (count == 0)
-            {
+            if (_flushBatch.Count == 0)
                 return;
-            }
 
-            var averagedSample = new ForceSample(
-                (float)(summedWeight / count),
-                latestTimestamp);
-
-            await _notifier.SendForceSamplesAsync([averagedSample]);
+            await _notifier.SendForceSamplesAsync(_flushBatch.ToArray());
         }
         finally
         {

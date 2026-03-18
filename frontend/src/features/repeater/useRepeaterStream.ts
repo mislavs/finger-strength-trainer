@@ -18,19 +18,24 @@ interface UseRepeaterStreamResult {
   resetSamples: () => void
 }
 
-const maxRenderedSamples = 600;
+const defaultWindowSeconds = 10;
 const initialStats: RepeaterStreamStats = {
   currentForceKg: 0,
   peakForceKg: 0,
 };
 
-function appendRollingSamples(current: ForceSamplePoint[], incoming: ForceSamplePoint[]): ForceSamplePoint[] {
+function appendRollingSamples(
+  current: ForceSamplePoint[],
+  incoming: ForceSamplePoint[],
+  windowSeconds: number,
+): ForceSamplePoint[] {
   const merged = [...current, ...incoming];
-  if (merged.length <= maxRenderedSamples) {
-    return merged;
-  }
+  if (merged.length === 0) return merged;
 
-  return merged.slice(merged.length - maxRenderedSamples);
+  const cutoff = merged[merged.length - 1].timestampSeconds - windowSeconds;
+  const firstVisible = merged.findIndex((s) => s.timestampSeconds >= cutoff);
+  if (firstVisible <= 0) return merged;
+  return merged.slice(firstVisible);
 }
 
 export function useRepeaterStream(): UseRepeaterStreamResult {
@@ -42,12 +47,24 @@ export function useRepeaterStream(): UseRepeaterStreamResult {
   const timestampOffsetRef = useRef(0);
   const lastTimestampRef = useRef(0);
 
+  const pendingSamplesRef = useRef<ForceSamplePoint[]>([]);
+  const rafIdRef = useRef(0);
+
+  const cancelPendingFrame = useCallback(() => {
+    if (rafIdRef.current !== 0) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
+    pendingSamplesRef.current = [];
+  }, []);
+
   const resetSamples = useCallback(() => {
+    cancelPendingFrame();
     setSamples([]);
     setStats(initialStats);
     timestampOffsetRef.current = 0;
     lastTimestampRef.current = 0;
-  }, []);
+  }, [cancelPendingFrame]);
 
   const enqueueCommand = useCallback((command: () => Promise<void>) => {
     const nextCommand = commandQueueRef.current
@@ -64,30 +81,42 @@ export function useRepeaterStream(): UseRepeaterStreamResult {
         return;
       }
 
-      const adjustedSamples = incomingSamples.map((sample) => ({
-        ...sample,
-        timestampSeconds: sample.timestampSeconds + timestampOffsetRef.current,
-      }));
-      const latest = adjustedSamples[adjustedSamples.length - 1];
-      lastTimestampRef.current = latest.timestampSeconds;
+      pendingSamplesRef.current.push(...incomingSamples);
 
-      setSamples((currentSamples) => appendRollingSamples(currentSamples, adjustedSamples));
-      setStats((currentStats) => {
-        const incomingPeak = adjustedSamples.reduce((peak, sample) => Math.max(peak, sample.weightKg), 0);
+      if (rafIdRef.current === 0) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = 0;
+          const pending = pendingSamplesRef.current;
+          pendingSamplesRef.current = [];
 
-        return {
-          currentForceKg: latest.weightKg,
-          peakForceKg: Math.max(currentStats.peakForceKg, incomingPeak),
-        };
-      });
+          const adjustedSamples = pending.map((sample) => ({
+            ...sample,
+            timestampSeconds: sample.timestampSeconds + timestampOffsetRef.current,
+          }));
+          const latest = adjustedSamples[adjustedSamples.length - 1];
+          lastTimestampRef.current = latest.timestampSeconds;
+
+          setSamples((current) => appendRollingSamples(current, adjustedSamples, defaultWindowSeconds));
+          setStats((currentStats) => {
+            const incomingPeak = adjustedSamples.reduce(
+              (peak, s) => Math.max(peak, s.weightKg), 0);
+
+            return {
+              currentForceKg: latest.weightKg,
+              peakForceKg: Math.max(currentStats.peakForceKg, incomingPeak),
+            };
+          });
+        });
+      }
     };
 
     connection.on("ForceSamples", onForceSamples);
 
     return () => {
       connection.off("ForceSamples", onForceSamples);
+      cancelPendingFrame();
     };
-  }, [connection]);
+  }, [connection, cancelPendingFrame]);
 
   const start = useCallback(async (options?: { reset?: boolean }) => {
     await enqueueCommand(async () => {
