@@ -153,6 +153,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
           label: "Force",
           stroke: palette.seriesLine,
           width: 2,
+          points: { show: false },
           paths: uPlot.paths.spline!(),
         },
       ],
@@ -171,6 +172,7 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
 
     let latestDataTimestamp = 0;
     let anchorWallTime = 0;
+    let prevRightEdge = 0;
 
     const tick = () => {
       const currentSamples = samplesRef.current;
@@ -181,15 +183,19 @@ export function ForceChart({ samples, windowSeconds = 30, height = 320, targetFo
         latestDataTimestamp = currentSamples.length > 0
           ? currentSamples[currentSamples.length - 1].timestampSeconds
           : 0;
-        anchorWallTime = performance.now();
+        anchorWallTime = prevRightEdge > latestDataTimestamp
+          ? performance.now() - (prevRightEdge - latestDataTimestamp) * 1000
+          : performance.now();
         plot.setData(buildPlotData(currentSamples, ws));
       }
 
       if (latestDataTimestamp > 0) {
         const elapsedSeconds = (performance.now() - anchorWallTime) / 1000;
-        const rightEdge = elapsedSeconds < 0.25
+        const candidate = elapsedSeconds < 0.25
           ? latestDataTimestamp + elapsedSeconds
           : latestDataTimestamp;
+        const rightEdge = Math.max(prevRightEdge, candidate);
+        prevRightEdge = rightEdge;
         plot.setScale("x", { min: rightEdge - ws, max: rightEdge });
       }
 

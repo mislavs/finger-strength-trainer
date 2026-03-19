@@ -15,7 +15,6 @@ public sealed class RepeaterStreamService
     private readonly object _gate = new();
     private readonly ConcurrentQueue<ForceSample> _pendingSamples = new();
     private readonly SemaphoreSlim _flushLock = new(1, 1);
-    private readonly List<ForceSample> _flushBatch = new();
     private Timer? _flushTimer;
     private RepeaterStreamState _state = RepeaterStreamState.Idle;
 
@@ -161,14 +160,14 @@ public sealed class RepeaterStreamService
                 return;
             }
 
-            _flushBatch.Clear();
+            ForceSample? last = null;
             while (_pendingSamples.TryDequeue(out var sample))
-                _flushBatch.Add(sample);
+                last = sample;
 
-            if (_flushBatch.Count == 0)
+            if (last is not { } latest)
                 return;
 
-            await _notifier.SendForceSamplesAsync(_flushBatch.ToArray());
+            await _notifier.SendForceSamplesAsync([latest]);
         }
         finally
         {

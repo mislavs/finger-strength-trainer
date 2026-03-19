@@ -2,7 +2,6 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TindeqTrainer.Api.Hubs;
@@ -28,7 +27,6 @@ public sealed class TrainingHubTests
         _clients = Substitute.For<IHubCallerClients>();
         _allClientProxy = Substitute.For<IClientProxy>();
         var notifier = Substitute.For<ILiveStreamNotifier>();
-        var serviceScopeFactory = Substitute.For<IServiceScopeFactory>();
         var connectionMonitor = new BleConnectionMonitor(
             _progressorService,
             _connectionNotifier,
@@ -38,7 +36,6 @@ public sealed class TrainingHubTests
         _liveStreamService = new LiveStreamService(
             _progressorService,
             notifier,
-            serviceScopeFactory,
             connectionMonitor,
             NullLogger<LiveStreamService>.Instance);
         _repeaterStreamService = new RepeaterStreamService(

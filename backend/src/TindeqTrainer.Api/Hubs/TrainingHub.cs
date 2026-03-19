@@ -73,17 +73,6 @@ public class TrainingHub(
         await _liveStreamService.StopAsync(Context.ConnectionAborted);
     }
 
-    public async Task<Guid> SaveLiveStream()
-    {
-        return await _liveStreamService.SaveAsync(Context.ConnectionAborted);
-    }
-
-    public Task DiscardLiveStream()
-    {
-        _liveStreamService.Discard();
-        return Task.CompletedTask;
-    }
-
     public async Task StartRepeaterStream()
     {
         if (_liveStreamService.IsStreaming)

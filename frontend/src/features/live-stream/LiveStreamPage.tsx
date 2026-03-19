@@ -1,23 +1,20 @@
 import { useMemo } from "react";
-import { toast } from "sonner";
 
 import { ForceChart } from "@/components/ForceChart";
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
 import { useLiveStream } from "@/features/live-stream/hooks";
 import { LiveStats } from "@/features/live-stream/LiveStats";
-import { SaveDiscardDialog } from "@/features/live-stream/SaveDiscardDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const streamLabels = {
   idle: "Idle",
   streaming: "Streaming",
-  stopped: "Stopped",
 } as const;
 
 export function LiveStreamPage() {
   const { status: deviceStatus, isReconnecting, reconnectionFailed } = useDeviceStatus();
-  const { samples, stats, stoppedStats, streamState, isBusy, error, start, stop, save, discard } = useLiveStream();
+  const { samples, stats, streamState, isBusy, error, start, stop } = useLiveStream();
 
   const primaryAction = useMemo(() => {
     if (streamState === "streaming") {
@@ -35,18 +32,6 @@ export function LiveStreamPage() {
 
   const canStart = streamState !== "streaming";
   const isPrimaryDisabled = isBusy || (canStart && !deviceStatus.isConnected);
-
-  const handleSave = async () => {
-    const sessionId = await save();
-    if (sessionId) {
-      toast.success("Live stream saved.");
-    }
-  };
-
-  const handleDiscard = async () => {
-    await discard();
-    toast.success("Live stream discarded.");
-  };
 
   return (
     <div className="space-y-4">
@@ -79,7 +64,7 @@ export function LiveStreamPage() {
 
       {reconnectionFailed && streamState === "streaming" ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          Could not reconnect to the device. The live stream is being finalized so you can save or discard the partial recording.
+          Could not reconnect to the device. The live stream has been stopped.
         </p>
       ) : null}
 
@@ -94,20 +79,12 @@ export function LiveStreamPage() {
       <Card className="gap-4 py-4">
         <CardHeader className="px-4 pb-0">
           <CardTitle>Force Chart</CardTitle>
-          <CardDescription>Rolling 30 second window of live force samples.</CardDescription>
+          <CardDescription>Rolling 10 second window of live force samples.</CardDescription>
         </CardHeader>
         <CardContent className="px-4 pt-0">
-          <ForceChart samples={samples} />
+          <ForceChart samples={samples} windowSeconds={10} />
         </CardContent>
       </Card>
-
-      <SaveDiscardDialog
-        open={streamState === "stopped"}
-        stats={stoppedStats}
-        isBusy={isBusy}
-        onSave={handleSave}
-        onDiscard={handleDiscard}
-      />
     </div>
   );
 }

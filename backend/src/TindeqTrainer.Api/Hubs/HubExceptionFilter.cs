@@ -12,7 +12,6 @@ public sealed class HubExceptionFilter(ILogger<HubExceptionFilter> logger) : IHu
     private const string DeviceInitFailedMessage = "Could not initialize device. Reconnect and try again.";
     private const string LiveStreamAlreadyRunningMessage = "Live stream is already running";
     private const string LiveStreamNotRunningMessage = "Live stream is not running";
-    private const string StopBeforeSaveDiscardMessage = "Stop the live stream before saving or discarding";
 
     public async ValueTask<object?> InvokeMethodAsync(
         HubInvocationContext invocationContext,
@@ -98,14 +97,6 @@ public sealed class HubExceptionFilter(ILogger<HubExceptionFilter> logger) : IHu
             if (Contains(message, "Live stream can only stop from the streaming state"))
             {
                 return LiveStreamNotRunningMessage;
-            }
-
-            if (ContainsAny(
-                    message,
-                    "Live stream can only be saved from the stopped state",
-                    "Live stream can only be discarded from the stopped state"))
-            {
-                return StopBeforeSaveDiscardMessage;
             }
         }
 

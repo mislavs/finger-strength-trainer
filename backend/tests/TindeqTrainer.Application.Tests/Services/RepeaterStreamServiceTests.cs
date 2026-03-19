@@ -73,7 +73,7 @@ public sealed class RepeaterStreamServiceTests
     }
 
     [Fact]
-    public async Task FlushTimer_WhenSamplesPending_SendsDecimatedAveragedSample()
+    public async Task FlushTimer_WhenSamplesPending_SendsLastSample()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await _sut.StartAsync(cancellationToken);
@@ -89,7 +89,7 @@ public sealed class RepeaterStreamServiceTests
 
         await _notifier.Received().SendForceSamplesAsync(Arg.Is<ForceSample[]>(batch =>
             batch.Length == 1 &&
-            Math.Abs(batch[0].WeightKg - 12f) < 0.001f &&
+            Math.Abs(batch[0].WeightKg - 15f) < 0.001f &&
             Math.Abs(batch[0].TimestampSeconds - 0.3d) < 0.001d));
 
         await _sut.StopAsync(cancellationToken);

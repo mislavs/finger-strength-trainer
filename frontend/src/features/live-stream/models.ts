@@ -1,9 +1,3 @@
-export interface LiveStreamStoppedStats {
-  peakForceKg: number
-  avgForceKg: number
-  durationSeconds: number
-}
-
 export interface LiveStatsSnapshot {
   currentForceKg: number
   peakForceKg: number
@@ -11,4 +5,4 @@ export interface LiveStatsSnapshot {
   avgForceKg: number | null
 }
 
-export type LiveStreamState = "idle" | "streaming" | "stopped"
+export type LiveStreamState = "idle" | "streaming"

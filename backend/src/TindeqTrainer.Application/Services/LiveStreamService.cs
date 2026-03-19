@@ -1,27 +1,20 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using TindeqTrainer.Domain.Entities;
-using TindeqTrainer.Domain.Enums;
 using TindeqTrainer.Domain.Services;
 using TindeqTrainer.Domain.ValueObjects;
-using TindeqTrainer.Infrastructure.Persistence;
 
 namespace TindeqTrainer.Application.Services;
 
 public sealed class LiveStreamService
 {
-    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(25);
 
     private readonly IProgressorService _progressorService;
     private readonly ILiveStreamNotifier _notifier;
-    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<LiveStreamService> _logger;
     private readonly object _gate = new();
-    private readonly ConcurrentQueue<ForceSample> _rawSamples = new();
     private readonly ConcurrentQueue<ForceSample> _pendingSamples = new();
     private readonly SemaphoreSlim _flushLock = new(1, 1);
-    private readonly List<ForceSample> _flushBatch = new();
     private Timer? _flushTimer;
 
     private LiveStreamState _state = LiveStreamState.Idle;
@@ -46,13 +39,11 @@ public sealed class LiveStreamService
     public LiveStreamService(
         IProgressorService progressorService,
         ILiveStreamNotifier notifier,
-        IServiceScopeFactory serviceScopeFactory,
         BleConnectionMonitor connectionMonitor,
         ILogger<LiveStreamService> logger)
     {
         _progressorService = progressorService;
         _notifier = notifier;
-        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
 
         connectionMonitor.Reconnected += OnReconnected;
@@ -127,86 +118,16 @@ public sealed class LiveStreamService
 
         await FlushPendingSamplesAsync(allowWhenStopped: true);
 
+        LiveStreamStatsDto stats;
         lock (_gate)
         {
-            _state = LiveStreamState.Stopped;
             _stoppedAtUtc = DateTime.UtcNow;
+            stats = BuildStatsCore();
+            ResetToIdleState();
         }
 
-        var stats = BuildStats();
         await _notifier.SendLiveStreamStoppedAsync(stats);
         return stats;
-    }
-
-    public async Task<Guid> SaveAsync(CancellationToken cancellationToken = default)
-    {
-        LiveStreamRecord record;
-
-        lock (_gate)
-        {
-            if (_state is not LiveStreamState.Stopped)
-            {
-                throw new InvalidOperationException("Live stream can only be saved from the stopped state.");
-            }
-
-            record = new LiveStreamRecord(
-                Guid.NewGuid(),
-                _startedAtUtc,
-                _rawSamples.ToArray().ToList(),
-                _peakForceKg,
-                _sampleCount > 0 ? _totalForceKg / _sampleCount : 0d,
-                TimeSpan.FromSeconds(GetDurationSeconds()));
-        }
-
-        using var scope = _serviceScopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var session = Session.Create(
-            record.Date,
-            SessionType.LiveStream,
-            protocolId: null,
-            protocolName: "Live Stream",
-            isComplete: true,
-            peakForceKg: record.PeakForceKg,
-            avgForceKg: record.AvgForceKg,
-            durationSeconds: record.Duration.TotalSeconds,
-            id: record.Id);
-
-        dbContext.Sessions.Add(session);
-
-        if (record.Samples.Count > 0)
-        {
-            var sessionSamples = record.Samples
-                .Select(sample => SessionSample.Create(
-                    session.Id,
-                    sample.WeightKg,
-                    sample.TimestampSeconds))
-                .ToList();
-
-            dbContext.SessionSamples.AddRange(sessionSamples);
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        lock (_gate)
-        {
-            ResetToIdleState();
-        }
-
-        return session.Id;
-    }
-
-    public void Discard()
-    {
-        lock (_gate)
-        {
-            if (_state is not LiveStreamState.Stopped)
-            {
-                throw new InvalidOperationException("Live stream can only be discarded from the stopped state.");
-            }
-
-            ResetToIdleState();
-        }
     }
 
     private void OnReconnected(DeviceStatusDto _status)
@@ -260,7 +181,15 @@ public sealed class LiveStreamService
         }
 
         await FlushPendingSamplesAsync(allowWhenStopped: true);
-        await _notifier.SendLiveStreamStoppedAsync(BuildStats());
+
+        LiveStreamStatsDto stats;
+        lock (_gate)
+        {
+            stats = BuildStatsCore();
+            ResetToIdleState();
+        }
+
+        await _notifier.SendLiveStreamStoppedAsync(stats);
     }
 
     private async void OnFlushTimer(object? _)
@@ -284,7 +213,6 @@ public sealed class LiveStreamService
 
             foreach (var sample in samples)
             {
-                _rawSamples.Enqueue(sample);
                 _pendingSamples.Enqueue(sample);
                 _sampleCount++;
                 _totalForceKg += sample.WeightKg;
@@ -308,14 +236,14 @@ public sealed class LiveStreamService
                 return;
             }
 
-            _flushBatch.Clear();
+            ForceSample? last = null;
             while (_pendingSamples.TryDequeue(out var sample))
-                _flushBatch.Add(sample);
+                last = sample;
 
-            if (_flushBatch.Count == 0)
+            if (last is not { } latest)
                 return;
 
-            await _notifier.SendForceSamplesAsync(_flushBatch.ToArray());
+            await _notifier.SendForceSamplesAsync([latest]);
         }
         finally
         {
@@ -323,15 +251,12 @@ public sealed class LiveStreamService
         }
     }
 
-    private LiveStreamStatsDto BuildStats()
+    private LiveStreamStatsDto BuildStatsCore()
     {
-        lock (_gate)
-        {
-            return new LiveStreamStatsDto(
-                _peakForceKg,
-                _sampleCount > 0 ? _totalForceKg / _sampleCount : 0d,
-                GetDurationSeconds());
-        }
+        return new LiveStreamStatsDto(
+            _peakForceKg,
+            _sampleCount > 0 ? _totalForceKg / _sampleCount : 0d,
+            GetDurationSeconds());
     }
 
     private double GetDurationSeconds()
@@ -359,10 +284,6 @@ public sealed class LiveStreamService
         _totalForceKg = 0d;
         _sampleCount = 0;
         _lastSampleTimestampSeconds = 0d;
-
-        while (_rawSamples.TryDequeue(out _))
-        {
-        }
 
         while (_pendingSamples.TryDequeue(out _))
         {

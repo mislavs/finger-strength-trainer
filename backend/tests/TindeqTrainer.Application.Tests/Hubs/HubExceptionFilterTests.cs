@@ -54,8 +54,6 @@ public sealed class HubExceptionFilterTests
     [Theory]
     [InlineData("Live stream can only start from the idle state.", "Live stream is already running")]
     [InlineData("Live stream can only stop from the streaming state.", "Live stream is not running")]
-    [InlineData("Live stream can only be saved from the stopped state.", "Stop the live stream before saving or discarding")]
-    [InlineData("Live stream can only be discarded from the stopped state.", "Stop the live stream before saving or discarding")]
     public async Task InvokeMethodAsync_WhenLiveStreamStateIsInvalid_ThrowsFriendlyHubException(string message, string expected)
     {
         // Arrange
