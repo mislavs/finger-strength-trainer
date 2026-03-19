@@ -24,14 +24,15 @@ public sealed class RepeaterStreamServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_WhenIdle_TaresAndStartsMeasurement()
+    public async Task StartAsync_WhenIdle_StartsMeasurement()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
 
         await _sut.StartAsync(cancellationToken);
 
-        await _progressorService.Received(1).TareAsync(cancellationToken);
+        await _progressorService.DidNotReceive().TareAsync(Arg.Any<CancellationToken>());
         await _progressorService.Received(1).StartMeasurementAsync(cancellationToken);
+        await _notifier.Received(1).SendForceStreamStateChangedAsync(true);
         _progressorService.Received(1).SamplesReceived += Arg.Any<Action<ForceSample[]>>();
 
         await _sut.StopAsync(cancellationToken);
@@ -68,6 +69,7 @@ public sealed class RepeaterStreamServiceTests
         await _sut.StopAsync(cancellationToken);
 
         await _progressorService.Received(1).StopMeasurementAsync(cancellationToken);
+        await _notifier.Received(1).SendForceStreamStateChangedAsync(false);
         _progressorService.Received(1).SamplesReceived -= Arg.Any<Action<ForceSample[]>>();
         _sut.IsStreaming.Should().BeFalse();
     }

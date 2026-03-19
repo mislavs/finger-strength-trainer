@@ -44,6 +44,7 @@ public sealed class LiveStreamServiceTests
 
         // Assert
         await _progressorService.Received(1).StartMeasurementAsync(cancellationToken);
+        await _notifier.Received(1).SendForceStreamStateChangedAsync(true);
         _progressorService.Received(1).SamplesReceived += Arg.Any<Action<ForceSample[]>>();
 
         await _sut.StopAsync(cancellationToken);
@@ -99,6 +100,7 @@ public sealed class LiveStreamServiceTests
         result.AvgForceKg.Should().Be(12d);
         result.DurationSeconds.Should().Be(0.2d);
         await _progressorService.Received(1).StopMeasurementAsync(cancellationToken);
+        await _notifier.Received(1).SendForceStreamStateChangedAsync(false);
         _progressorService.Received(1).SamplesReceived -= Arg.Any<Action<ForceSample[]>>();
         await _notifier.Received(1).SendLiveStreamStoppedAsync(Arg.Is<LiveStreamStatsDto>(stats =>
             stats.PeakForceKg == 14d &&
@@ -200,5 +202,6 @@ public sealed class LiveStreamServiceTests
         stats.DurationSeconds.Should().Be(0.25d);
         stats.AvgForceKg.Should().Be(11d);
         await _progressorService.Received(3).ConnectAsync(Arg.Any<CancellationToken>());
+        await _notifier.Received(1).SendForceStreamStateChangedAsync(false);
     }
 }

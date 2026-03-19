@@ -15,6 +15,7 @@ public sealed class TrainingHubTests
     private readonly IProgressorService _progressorService;
     private readonly IConnectionNotifier _connectionNotifier;
     private readonly IHubCallerClients _clients;
+    private readonly ISingleClientProxy _callerClientProxy;
     private readonly IClientProxy _allClientProxy;
     private readonly LiveStreamService _liveStreamService;
     private readonly RepeaterStreamService _repeaterStreamService;
@@ -25,6 +26,7 @@ public sealed class TrainingHubTests
         _progressorService = Substitute.For<IProgressorService>();
         _connectionNotifier = Substitute.For<IConnectionNotifier>();
         _clients = Substitute.For<IHubCallerClients>();
+        _callerClientProxy = Substitute.For<ISingleClientProxy>();
         _allClientProxy = Substitute.For<IClientProxy>();
         var notifier = Substitute.For<ILiveStreamNotifier>();
         var connectionMonitor = new BleConnectionMonitor(
@@ -43,9 +45,13 @@ public sealed class TrainingHubTests
             notifier,
             NullLogger<RepeaterStreamService>.Instance);
 
+        _callerClientProxy
+            .SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
         _allClientProxy
             .SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
+        _clients.Caller.Returns(_callerClientProxy);
         _clients.All.Returns(_allClientProxy);
         _progressorService.IsConnected.Returns(false);
         _progressorService.DeviceName.Returns((string?)null);
@@ -159,6 +165,50 @@ public sealed class TrainingHubTests
 
         await act.Should().NotThrowAsync();
         await _progressorService.DidNotReceive().StopMeasurementAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Tare_WhenLiveStreamIsRunning_ThrowsHubException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _liveStreamService.StartAsync(cancellationToken);
+
+        var act = () => _sut.Tare();
+
+        await act.Should().ThrowAsync<HubException>()
+            .WithMessage("Cannot tare while a force stream is active.");
+
+        await _liveStreamService.StopAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task Tare_WhenRepeaterStreamIsRunning_ThrowsHubException()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _repeaterStreamService.StartAsync(cancellationToken);
+
+        var act = () => _sut.Tare();
+
+        await act.Should().ThrowAsync<HubException>()
+            .WithMessage("Cannot tare while a force stream is active.");
+
+        await _repeaterStreamService.StopAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_WhenStreamIsActive_SendsForceStreamStateSnapshotToCaller()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await _liveStreamService.StartAsync(cancellationToken);
+
+        await _sut.OnConnectedAsync();
+
+        await _callerClientProxy.Received(1).SendCoreAsync(
+            "ForceStreamStateChanged",
+            Arg.Is<object?[]>(arguments => arguments.Length == 1 && Equals(arguments[0], true)),
+            cancellationToken);
+
+        await _liveStreamService.StopAsync(cancellationToken);
     }
 
     private sealed class TestHubCallerContext(CancellationToken connectionAborted) : HubCallerContext

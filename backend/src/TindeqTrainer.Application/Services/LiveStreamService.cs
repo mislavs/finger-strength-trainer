@@ -69,6 +69,7 @@ public sealed class LiveStreamService
         try
         {
             await _progressorService.StartMeasurementAsync(cancellationToken);
+            await _notifier.SendForceStreamStateChangedAsync(true);
         }
         catch
         {
@@ -126,6 +127,7 @@ public sealed class LiveStreamService
             ResetToIdleState();
         }
 
+        await _notifier.SendForceStreamStateChangedAsync(false);
         await _notifier.SendLiveStreamStoppedAsync(stats);
         return stats;
     }
@@ -189,6 +191,7 @@ public sealed class LiveStreamService
             ResetToIdleState();
         }
 
+        await _notifier.SendForceStreamStateChangedAsync(false);
         await _notifier.SendLiveStreamStoppedAsync(stats);
     }
 

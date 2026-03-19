@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/sonner";
+import { ForceStreamStateProvider } from "@/hooks/useForceStreamState";
 import { SignalRProvider } from "@/hooks/useSignalR";
 import App from "@/App";
 import "@/index.css";
@@ -25,11 +26,13 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
         <SignalRProvider>
-          <ErrorBoundary>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </ErrorBoundary>
+          <ForceStreamStateProvider>
+            <ErrorBoundary>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </ErrorBoundary>
+          </ForceStreamStateProvider>
         </SignalRProvider>
         <Toaster richColors />
       </QueryClientProvider>

@@ -56,8 +56,8 @@ public sealed class RepeaterStreamService
 
         try
         {
-            await _progressorService.TareAsync(cancellationToken);
             await _progressorService.StartMeasurementAsync(cancellationToken);
+            await _notifier.SendForceStreamStateChangedAsync(true);
         }
         catch
         {
@@ -111,6 +111,8 @@ public sealed class RepeaterStreamService
         {
             ResetToIdleState();
         }
+
+        await _notifier.SendForceStreamStateChangedAsync(false);
     }
 
     private async void OnFlushTimer(object? _)

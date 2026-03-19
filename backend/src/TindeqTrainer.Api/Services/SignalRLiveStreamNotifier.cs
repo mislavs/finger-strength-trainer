@@ -13,6 +13,11 @@ public sealed class SignalRLiveStreamNotifier(
         return hubContext.Clients.All.SendAsync("ForceSamples", samples);
     }
 
+    public Task SendForceStreamStateChangedAsync(bool isActive)
+    {
+        return hubContext.Clients.All.SendAsync("ForceStreamStateChanged", isActive);
+    }
+
     public Task SendLiveStreamStoppedAsync(LiveStreamStatsDto stats)
     {
         return hubContext.Clients.All.SendAsync("LiveStreamStopped", stats);

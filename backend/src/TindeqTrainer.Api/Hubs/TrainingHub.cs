@@ -14,6 +14,7 @@ public class TrainingHub(
     {
         var cancellationToken = Context.ConnectionAborted;
         await Clients.Caller.SendAsync("DeviceStatus", BuildDeviceStatus(), cancellationToken);
+        await Clients.Caller.SendAsync("ForceStreamStateChanged", IsForceStreamActive(), cancellationToken);
         if (_connectionMonitor.IsReconnecting)
         {
             await Clients.Caller.SendAsync("ConnectionLost", cancellationToken);
@@ -55,6 +56,11 @@ public class TrainingHub(
 
     public async Task Tare()
     {
+        if (IsForceStreamActive())
+        {
+            throw new HubException("Cannot tare while a force stream is active.");
+        }
+
         await _progressorService.TareAsync(Context.ConnectionAborted);
     }
 
@@ -100,5 +106,10 @@ public class TrainingHub(
             _progressorService.DeviceName,
             _progressorService.BatteryVoltage,
             _progressorService.FirmwareVersion);
+    }
+
+    private bool IsForceStreamActive()
+    {
+        return _liveStreamService.IsStreaming || _repeaterStreamService.IsStreaming;
     }
 }

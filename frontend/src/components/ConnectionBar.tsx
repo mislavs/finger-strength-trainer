@@ -1,4 +1,5 @@
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
+import { useForceStreamState } from "@/hooks/useForceStreamState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -108,6 +109,7 @@ function formatBatteryVoltage(batteryVoltage: number | null): string {
 
 export function ConnectionBar() {
   const { status, isBusy, isConnecting, isReconnecting, reconnectionFailed, error, connect, cancelConnect, disconnect, tare } = useDeviceStatus();
+  const { isForceStreamActive } = useForceStreamState();
   const isConnected = status.isConnected;
   const connectionState = getConnectionBarState(isConnecting, isReconnecting, isConnected, reconnectionFailed);
   const primaryAction = getPrimaryAction(connectionState, isBusy, connect, cancelConnect, disconnect);
@@ -133,7 +135,12 @@ export function ConnectionBar() {
         >
           {primaryAction.label}
         </Button>
-        <Button size="sm" variant="secondary" onClick={tare} disabled={!isConnected || isBusy || connectionState === "reconnecting"}>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={tare}
+          disabled={!isConnected || isBusy || connectionState === "reconnecting" || isForceStreamActive}
+        >
           Tare
         </Button>
       </div>
