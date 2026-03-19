@@ -19,11 +19,13 @@ interface UseDeviceStatusResult {
   isConnecting: boolean
   isReconnecting: boolean
   reconnectionFailed: boolean
+  showTarePrompt: boolean
   error: string | null
   connect: () => Promise<void>
   cancelConnect: () => Promise<void>
   disconnect: () => Promise<void>
-  tare: () => Promise<void>
+  tare: () => Promise<boolean>
+  dismissTarePrompt: () => void
 }
 
 type DeviceCommand = "Connect" | "Disconnect" | "Tare"
@@ -63,6 +65,7 @@ export function useDeviceStatus(): UseDeviceStatusResult {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectionFailed, setReconnectionFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTarePrompt, setShowTarePrompt] = useState(false);
   const activeCommandIdRef = useRef(0);
   const connectAttemptIdRef = useRef(0);
   const canceledConnectAttemptIdRef = useRef<number | null>(null);
@@ -115,6 +118,9 @@ export function useDeviceStatus(): UseDeviceStatusResult {
 
   useEffect(() => {
     const onDeviceStatus = (nextStatus: DeviceStatus) => {
+      if (nextStatus.isConnected) {
+        setShowTarePrompt(true);
+      }
       applyStatus(nextStatus);
     };
 
@@ -153,7 +159,7 @@ export function useDeviceStatus(): UseDeviceStatusResult {
   }, [applyStatus, connection, markDisconnected]);
 
   const runCommand = useCallback(
-    async (command: DeviceCommand) => {
+    async (command: DeviceCommand): Promise<boolean> => {
       const commandId = ++activeCommandIdRef.current;
       const connectAttemptId = command === "Connect" ? ++connectAttemptIdRef.current : null;
       const wasConnectCanceled = () =>
@@ -177,27 +183,29 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       } catch {
         if (wasConnectCanceled()) {
           finishCommand();
-          return;
+          return false;
         }
 
         setError(getSignalRConnectionErrorMessage());
         finishCommand();
-        return;
+        return false;
       }
 
       if (wasConnectCanceled()) {
         finishCommand();
-        return;
+        return false;
       }
 
       try {
         await connection.invoke(command);
+        return true;
       } catch (commandError) {
         if (wasConnectCanceled()) {
-          return;
+          return false;
         }
 
         setError(toHubErrorMessage(commandError));
+        return false;
       } finally {
         finishCommand();
       }
@@ -234,8 +242,12 @@ export function useDeviceStatus(): UseDeviceStatusResult {
   }, [runCommand]);
 
   const tare = useCallback(async () => {
-    await runCommand("Tare");
+    return await runCommand("Tare");
   }, [runCommand]);
+
+  const dismissTarePrompt = useCallback(() => {
+    setShowTarePrompt(false);
+  }, []);
 
   return useMemo(
     () => ({
@@ -244,12 +256,14 @@ export function useDeviceStatus(): UseDeviceStatusResult {
       isConnecting,
       isReconnecting,
       reconnectionFailed,
+      showTarePrompt,
       error,
       connect,
       cancelConnect,
       disconnect,
       tare,
+      dismissTarePrompt,
     }),
-    [cancelConnect, connect, disconnect, error, isBusy, isConnecting, isReconnecting, reconnectionFailed, status, tare],
+    [cancelConnect, connect, disconnect, dismissTarePrompt, error, isBusy, isConnecting, isReconnecting, reconnectionFailed, showTarePrompt, status, tare],
   );
 }

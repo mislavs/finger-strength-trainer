@@ -1,7 +1,7 @@
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
-import { useForceStreamState } from "@/hooks/useForceStreamState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TareDialog } from "@/components/TareDialog";
 
 type ConnectionBarState = "connecting" | "reconnecting" | "connected" | "reconnectFailed" | "offline"
 
@@ -108,8 +108,7 @@ function formatBatteryVoltage(batteryVoltage: number | null): string {
 }
 
 export function ConnectionBar() {
-  const { status, isBusy, isConnecting, isReconnecting, reconnectionFailed, error, connect, cancelConnect, disconnect, tare } = useDeviceStatus();
-  const { isForceStreamActive } = useForceStreamState();
+  const { status, isBusy, isConnecting, isReconnecting, reconnectionFailed, showTarePrompt, error, connect, cancelConnect, disconnect, tare, dismissTarePrompt } = useDeviceStatus();
   const isConnected = status.isConnected;
   const connectionState = getConnectionBarState(isConnecting, isReconnecting, isConnected, reconnectionFailed);
   const primaryAction = getPrimaryAction(connectionState, isBusy, connect, cancelConnect, disconnect);
@@ -126,26 +125,18 @@ export function ConnectionBar() {
         <span className="text-muted-foreground">Firmware: {status.firmwareVersion ?? "--"}</span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant={primaryAction.variant}
-          onClick={primaryAction.onClick}
-          disabled={primaryAction.disabled}
-        >
-          {primaryAction.label}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={tare}
-          disabled={!isConnected || isBusy || connectionState === "reconnecting" || isForceStreamActive}
-        >
-          Tare
-        </Button>
-      </div>
+      <Button
+        size="sm"
+        variant={primaryAction.variant}
+        onClick={primaryAction.onClick}
+        disabled={primaryAction.disabled}
+      >
+        {primaryAction.label}
+      </Button>
 
       {error ? <p className="w-full text-xs text-destructive">{error}</p> : null}
+
+      <TareDialog open={showTarePrompt} onOpenChange={(open) => { if (!open) dismissTarePrompt(); }} onTare={tare} isBusy={isBusy} />
     </div>
   );
 }
