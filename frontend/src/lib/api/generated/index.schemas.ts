@@ -7,6 +7,7 @@
 export interface CreateProtocolRequest {
   /** @nullable */
   name?: string | null;
+  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;
@@ -33,6 +34,7 @@ export interface ProtocolDto {
   id?: string;
   /** @nullable */
   name?: string | null;
+  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;
@@ -43,6 +45,7 @@ export interface ProtocolDto {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
+  targetWeightKg?: number;
 }
 
 export interface ProtocolSummaryDto {
@@ -55,46 +58,10 @@ export interface ProtocolSummaryDto {
   workSeconds?: number;
 }
 
-export interface SessionSampleDto {
-  /** @nullable */
-  hand?: string | null;
-  /** @nullable */
-  setNumber?: number | null;
-  weightKg?: number;
-  timestampSeconds?: number;
-}
-
-export interface SessionDetailDto {
-  id?: string;
-  date?: string;
-  /** @nullable */
-  type?: string | null;
-  /** @nullable */
-  protocolName?: string | null;
-  isComplete?: boolean;
-  peakForceKg?: number;
-  avgForceKg?: number;
-  durationSeconds?: number;
-  /** @nullable */
-  samples?: SessionSampleDto[] | null;
-}
-
-export interface SessionSummaryDto {
-  id?: string;
-  date?: string;
-  /** @nullable */
-  type?: string | null;
-  /** @nullable */
-  protocolName?: string | null;
-  isComplete?: boolean;
-  peakForceKg?: number;
-  avgForceKg?: number;
-  durationSeconds?: number;
-}
-
 export interface UpdateProtocolRequest {
   /** @nullable */
   name?: string | null;
+  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;

@@ -77,7 +77,7 @@ try
     app.MapDeviceEndpoints();
     app.MapMaxWeightEndpoints();
     app.MapProtocolEndpoints();
-    app.MapSessionEndpoints();
+
 
     app.MapGet("/", () => Results.Ok("TindeqTrainer API is running."));
     app.MapDefaultEndpoints();

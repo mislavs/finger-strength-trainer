@@ -13,10 +13,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
 
     public DbSet<MaxWeightRecord> MaxWeightRecords => Set<MaxWeightRecord>();
 
-    public DbSet<Session> Sessions => Set<Session>();
-
-    public DbSet<SessionSample> SessionSamples => Set<SessionSample>();
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

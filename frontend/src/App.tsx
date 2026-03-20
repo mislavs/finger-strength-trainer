@@ -1,8 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Layout } from "@/components/Layout";
-import { HistoryPage } from "@/features/history/HistoryPage";
-import { SessionDetailPage } from "@/features/history/SessionDetailPage";
 import { LiveStreamPage } from "@/features/live-stream/LiveStreamPage";
 import { MaxWeightPage } from "@/features/max-weight/MaxWeightPage";
 import { ProtocolFormPage } from "@/features/protocols/ProtocolFormPage";
@@ -19,8 +17,6 @@ function App() {
         <Route path={appRoutes.maxWeight.slice(1)} element={<MaxWeightPage />} />
         <Route path={appRoutes.liveStream.slice(1)} element={<LiveStreamPage />} />
         <Route path={appRoutes.repeaters.slice(1)} element={<RepeaterPage />} />
-        <Route path={appRoutes.history.slice(1)} element={<HistoryPage />} />
-        <Route path={appRoutes.historyDetail.slice(1)} element={<SessionDetailPage />} />
         <Route path="*" element={<Navigate to={appRoutes.repeaters} replace />} />
       </Route>
     </Routes>
