@@ -7,11 +7,6 @@ import { LiveStats } from "@/features/live-stream/LiveStats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const streamLabels = {
-  idle: "Idle",
-  streaming: "Streaming",
-} as const;
-
 export function LiveStreamPage() {
   const { status: deviceStatus, isReconnecting, reconnectionFailed } = useDeviceStatus();
   const { samples, stats, streamState, isBusy, error, start, stop } = useLiveStream();
@@ -39,11 +34,10 @@ export function LiveStreamPage() {
         <div>
           <h1 className="text-2xl font-semibold">Live Stream</h1>
           <p className="text-sm text-muted-foreground">
-            Free-form force monitoring with real-time charting.
+            Stream live force data from your device.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">State: {streamLabels[streamState]}</span>
           <Button onClick={primaryAction.onClick} disabled={isPrimaryDisabled}>
             {isBusy ? "Working..." : primaryAction.label}
           </Button>
@@ -74,17 +68,21 @@ export function LiveStreamPage() {
         </p>
       ) : null}
 
-      <LiveStats stats={stats} />
+      {streamState === "streaming" && (
+        <>
+          <LiveStats stats={stats} />
 
-      <Card className="gap-4 py-4">
-        <CardHeader className="px-4 pb-0">
-          <CardTitle>Force Chart</CardTitle>
-          <CardDescription>Rolling 10 second window of live force samples.</CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 pt-0">
-          <ForceChart samples={samples} windowSeconds={10} />
-        </CardContent>
-      </Card>
+          <Card className="gap-4 py-4">
+            <CardHeader className="px-4 pb-0">
+              <CardTitle>Force Chart</CardTitle>
+              <CardDescription>Rolling 10 second window of live force samples.</CardDescription>
+            </CardHeader>
+            <CardContent className="px-4 pt-0">
+              <ForceChart samples={samples} windowSeconds={10} />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
