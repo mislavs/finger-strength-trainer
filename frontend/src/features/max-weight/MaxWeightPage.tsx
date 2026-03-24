@@ -20,11 +20,11 @@ import { ApiClientError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/utils";
 
 function formatWeight(value: number | null | undefined): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return "Not recorded";
   }
 
-  return `${(Object.is(value, -0) ? 0 : value).toFixed(1)} kg`;
+  return `${value.toFixed(1)} kg`;
 }
 
 function toInputWeight(value: number | null | undefined): string {
@@ -33,6 +33,27 @@ function toInputWeight(value: number | null | undefined): string {
   }
 
   return (Object.is(value, -0) ? 0 : value).toFixed(1);
+}
+
+function hasRecordedWeight(record: CreateMaxWeightRecordInput): boolean {
+  return record.leftWeightKg != null || record.rightWeightKg != null;
+}
+
+function hasCompleteMeasuredWeights(record: CreateMaxWeightRecordInput): boolean {
+  return typeof record.leftWeightKg === "number"
+    && Number.isFinite(record.leftWeightKg)
+    && record.leftWeightKg > 0
+    && typeof record.rightWeightKg === "number"
+    && Number.isFinite(record.rightWeightKg)
+    && record.rightWeightKg > 0;
+}
+
+function getRecordedWeightLabel(record: CreateMaxWeightRecordInput): string {
+  if (record.leftWeightKg != null && record.rightWeightKg != null) {
+    return "Max weights";
+  }
+
+  return record.leftWeightKg != null ? "Left hand max weight" : "Right hand max weight";
 }
 
 export function MaxWeightPage() {
@@ -51,6 +72,7 @@ export function MaxWeightPage() {
   const [isSavingManualRecord, setIsSavingManualRecord] = useState(false);
   const [measurementSaveError, setMeasurementSaveError] = useState<string | null>(null);
   const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
+  const [isCancellingMeasurements, setIsCancellingMeasurements] = useState(false);
 
   const currentCards = useMemo(
     () => [
@@ -60,7 +82,6 @@ export function MaxWeightPage() {
     [currentQuery.data],
   );
 
-  const activeHandPeakKg = measurement.activeHand === "Left" ? measurement.leftPeakKg : measurement.rightPeakKg;
   const measurementScaleKg = Math.max(
     10,
     measurement.currentForceKg,
@@ -69,24 +90,32 @@ export function MaxWeightPage() {
     currentQuery.data?.leftKg ?? 0,
     currentQuery.data?.rightKg ?? 0,
   );
-  const measurementsToSave = useMemo<CreateMaxWeightRecordInput[]>(
-    () =>
-      [
-        measurement.leftPeakKg > 0 ? { hand: "Left", weightKg: measurement.leftPeakKg } : null,
-        measurement.rightPeakKg > 0 ? { hand: "Right", weightKg: measurement.rightPeakKg } : null,
-      ].filter((value): value is CreateMaxWeightRecordInput => value !== null),
+  const measurementsToSave = useMemo<CreateMaxWeightRecordInput>(
+    () => ({
+      leftWeightKg: measurement.leftPeakKg > 0 ? measurement.leftPeakKg : null,
+      rightWeightKg: measurement.rightPeakKg > 0 ? measurement.rightPeakKg : null,
+    }),
     [measurement.leftPeakKg, measurement.rightPeakKg],
   );
+  const hasMeasurementsToSave = hasRecordedWeight(measurementsToSave);
+  const hasActiveOrPendingMeasurements = measurement.isStreaming || hasMeasurementsToSave;
+  const hasCompleteMeasurementsToSave = hasCompleteMeasuredWeights(measurementsToSave);
   const hasStreamConflict = isForceStreamActive && !measurement.isStreaming;
   const isMeasurementActionDisabled = measurement.isBusy
     || (!measurement.isStreaming && (!deviceStatus.isConnected || hasStreamConflict));
-  const canSaveMeasurements = measurementsToSave.length > 0
-    && !measurement.isStreaming
+  const canSaveMeasurements = hasCompleteMeasurementsToSave
     && !measurement.isBusy
-    && !isSavingMeasurements;
+    && !isSavingMeasurements
+    && !isCancellingMeasurements;
+  const canCancelMeasurements = hasActiveOrPendingMeasurements
+    && !measurement.isBusy
+    && !isSavingMeasurements
+    && !isCancellingMeasurements;
+  const canRecordManually = leftWeightKg.trim() !== ""
+    && rightWeightKg.trim() !== ""
+    && !isSavingManualRecord;
   const showMeasurementLiveUi = measurement.isStreaming;
-  const showMeasurementResults = measurement.isStreaming || measurementsToSave.length > 0;
-  const showSaveMeasurements = !measurement.isStreaming && measurementsToSave.length > 0;
+  const showMeasurementResults = measurement.isStreaming || hasMeasurementsToSave;
 
   useEffect(() => {
     if (!isLeftWeightDirty) {
@@ -104,37 +133,41 @@ export function MaxWeightPage() {
     event.preventDefault();
     setFormError(null);
 
-    const recordsToCreate: CreateMaxWeightRecordInput[] = [];
-    const manualEntries = [
-      { hand: "Left" as const, value: leftWeightKg },
-      { hand: "Right" as const, value: rightWeightKg },
-    ];
-
-    for (const entry of manualEntries) {
-      if (entry.value.trim() === "") {
-        continue;
-      }
-
-      const parsedWeightKg = Number(entry.value);
-      if (!Number.isFinite(parsedWeightKg) || parsedWeightKg <= 0) {
-        setFormError(`${entry.hand} weight must be greater than 0.`);
+    let nextLeftWeightKg: number | null = null;
+    if (leftWeightKg.trim() !== "") {
+      const parsedLeftWeightKg = Number(leftWeightKg);
+      if (!Number.isFinite(parsedLeftWeightKg) || parsedLeftWeightKg <= 0) {
+        setFormError("Left weight must be greater than 0.");
         return;
       }
 
-      recordsToCreate.push({
-        hand: entry.hand,
-        weightKg: parsedWeightKg,
-      });
+      nextLeftWeightKg = parsedLeftWeightKg;
     }
 
-    if (recordsToCreate.length === 0) {
-      setFormError("Enter a weight for at least one hand.");
+    let nextRightWeightKg: number | null = null;
+    if (rightWeightKg.trim() !== "") {
+      const parsedRightWeightKg = Number(rightWeightKg);
+      if (!Number.isFinite(parsedRightWeightKg) || parsedRightWeightKg <= 0) {
+        setFormError("Right weight must be greater than 0.");
+        return;
+      }
+
+      nextRightWeightKg = parsedRightWeightKg;
+    }
+
+    const recordToCreate: CreateMaxWeightRecordInput = {
+      leftWeightKg: nextLeftWeightKg,
+      rightWeightKg: nextRightWeightKg,
+    };
+
+    if (!hasCompleteMeasuredWeights(recordToCreate)) {
+      setFormError("Enter a weight greater than 0 for both hands.");
       return;
     }
 
     try {
       setIsSavingManualRecord(true);
-      await Promise.all(recordsToCreate.map((record) => createMaxWeightRecord(record)));
+      await createMaxWeightRecord(recordToCreate);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: maxWeightQueryKeys.current }),
         queryClient.invalidateQueries({ queryKey: maxWeightQueryKeys.history }),
@@ -142,7 +175,7 @@ export function MaxWeightPage() {
 
       setIsLeftWeightDirty(false);
       setIsRightWeightDirty(false);
-      toast.success(recordsToCreate.length === 1 ? `${recordsToCreate[0].hand} hand max weight recorded.` : "Max weights recorded.");
+      toast.success(`${getRecordedWeightLabel(recordToCreate)} recorded.`);
     } catch (error) {
       if (error instanceof ApiClientError) {
         setFormError(error.message);
@@ -155,8 +188,9 @@ export function MaxWeightPage() {
   }
 
   async function handleSaveMeasurements(): Promise<void> {
-    if (measurementsToSave.length === 0) {
-      setMeasurementSaveError("Measure at least one hand before saving.");
+    const recordToCreate = measurementsToSave;
+    if (!hasCompleteMeasuredWeights(recordToCreate)) {
+      setMeasurementSaveError("Measure both hands before saving.");
       return;
     }
 
@@ -164,18 +198,21 @@ export function MaxWeightPage() {
     setIsSavingMeasurements(true);
 
     try {
-      await Promise.all(measurementsToSave.map((record) => createMaxWeightRecord(record)));
+      if (measurement.isStreaming) {
+        const stopped = await measurement.stop();
+        if (!stopped) {
+          return;
+        }
+      }
+
+      await createMaxWeightRecord(recordToCreate);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: maxWeightQueryKeys.current }),
         queryClient.invalidateQueries({ queryKey: maxWeightQueryKeys.history }),
       ]);
 
       measurement.resetPeaks();
-      toast.success(
-        measurementsToSave.length === 1
-          ? `${measurementsToSave[0].hand} hand max weight recorded from measurement.`
-          : "Measured max weights recorded.",
-      );
+      toast.success(`${getRecordedWeightLabel(recordToCreate)} recorded from measurement.`);
     } catch (error) {
       if (error instanceof ApiClientError) {
         setMeasurementSaveError(error.message);
@@ -184,6 +221,25 @@ export function MaxWeightPage() {
       }
     } finally {
       setIsSavingMeasurements(false);
+    }
+  }
+
+  async function handleCancelMeasurements(): Promise<void> {
+    setMeasurementSaveError(null);
+    setIsCancellingMeasurements(true);
+
+    try {
+      if (measurement.isStreaming) {
+        const stopped = await measurement.stop();
+        if (!stopped) {
+          return;
+        }
+      }
+
+      measurement.resetPeaks();
+      toast.success("Measurements discarded.");
+    } finally {
+      setIsCancellingMeasurements(false);
     }
   }
 
@@ -220,19 +276,21 @@ export function MaxWeightPage() {
           <CardContent>
             <div className="space-y-4">
               {showMeasurementLiveUi ? (
-                <div className="inline-flex rounded-lg border bg-muted/40 p-1">
-                  {(["Left", "Right"] as const).map((handOption) => (
-                    <Button
-                      key={handOption}
-                      type="button"
-                      size="sm"
-                      variant={measurement.activeHand === handOption ? "default" : "ghost"}
-                      className="min-w-28"
-                      onClick={() => measurement.setActiveHand(handOption)}
-                    >
-                      {handOption} Hand
-                    </Button>
-                  ))}
+                <div className="flex justify-center">
+                  <div className="inline-flex rounded-lg border bg-muted/40 p-1">
+                    {(["Left", "Right"] as const).map((handOption) => (
+                      <Button
+                        key={handOption}
+                        type="button"
+                        size="sm"
+                        variant={measurement.activeHand === handOption ? "default" : "ghost"}
+                        className="min-w-28"
+                        onClick={() => measurement.setActiveHand(handOption)}
+                      >
+                        {handOption} Hand
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
@@ -275,8 +333,10 @@ export function MaxWeightPage() {
               {showMeasurementLiveUi ? (
                 <ForceBarGauge
                   currentForceKg={measurement.currentForceKg}
-                  peakForceKg={activeHandPeakKg}
+                  leftPeakKg={measurement.leftPeakKg}
+                  rightPeakKg={measurement.rightPeakKg}
                   maxScaleKg={measurementScaleKg}
+                  className="mx-auto w-full max-w-sm"
                 />
               ) : null}
 
@@ -295,28 +355,34 @@ export function MaxWeightPage() {
               ) : null}
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => void (measurement.isStreaming ? measurement.stop() : measurement.start())}
-                  disabled={isMeasurementActionDisabled}
-                >
-                  {measurement.isBusy
-                    ? "Working..."
-                    : measurement.isStreaming
-                      ? "Stop Measurement"
-                      : "Start Measurement"}
-                </Button>
+                {hasActiveOrPendingMeasurements ? (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={() => void handleSaveMeasurements()}
+                      disabled={!canSaveMeasurements}
+                    >
+                      {isSavingMeasurements ? "Saving..." : "Save Measurements"}
+                    </Button>
 
-                {showSaveMeasurements ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleCancelMeasurements()}
+                      disabled={!canCancelMeasurements}
+                    >
+                      {isCancellingMeasurements ? "Cancelling..." : "Cancel Measurements"}
+                    </Button>
+                  </>
+                ) : (
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() => void handleSaveMeasurements()}
-                    disabled={!canSaveMeasurements}
+                    onClick={() => void measurement.start()}
+                    disabled={isMeasurementActionDisabled}
                   >
-                    {isSavingMeasurements ? "Saving..." : "Save as max weights"}
+                    {measurement.isBusy ? "Working..." : "Start Measurement"}
                   </Button>
-                ) : null}
+                )}
               </div>
             </div>
           </CardContent>
@@ -326,7 +392,7 @@ export function MaxWeightPage() {
           <CardHeader>
             <CardTitle>Record manually</CardTitle>
             <CardDescription>
-              Enter a max weight directly if you already know the value for one hand.
+              Enter max weights directly if you already know the values for both hands.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -338,7 +404,7 @@ export function MaxWeightPage() {
                     id="max-weight-left"
                     type="number"
                     step="0.1"
-                    min="0"
+                    min="0.1"
                     value={leftWeightKg}
                     onChange={(event) => {
                       setLeftWeightKg(event.target.value);
@@ -354,7 +420,7 @@ export function MaxWeightPage() {
                     id="max-weight-right"
                     type="number"
                     step="0.1"
-                    min="0"
+                    min="0.1"
                     value={rightWeightKg}
                     onChange={(event) => {
                       setRightWeightKg(event.target.value);
@@ -365,7 +431,7 @@ export function MaxWeightPage() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={isSavingManualRecord}>
+              <Button type="submit" disabled={!canRecordManually}>
                 Record
               </Button>
             </form>
@@ -396,8 +462,8 @@ export function MaxWeightPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Hand</TableHead>
-                    <TableHead>Weight</TableHead>
+                    <TableHead>Left</TableHead>
+                    <TableHead>Right</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -405,8 +471,8 @@ export function MaxWeightPage() {
                     historyQuery.data.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell>{formatDateTime(record.recordedAt)}</TableCell>
-                        <TableCell>{record.hand}</TableCell>
-                        <TableCell>{record.weightKg.toFixed(1)} kg</TableCell>
+                        <TableCell>{record.leftWeightKg != null ? `${record.leftWeightKg.toFixed(1)} kg` : "-"}</TableCell>
+                        <TableCell>{record.rightWeightKg != null ? `${record.rightWeightKg.toFixed(1)} kg` : "-"}</TableCell>
                       </TableRow>
                     ))
                   ) : (

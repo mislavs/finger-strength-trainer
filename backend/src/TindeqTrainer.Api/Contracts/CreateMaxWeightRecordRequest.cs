@@ -1,6 +1,6 @@
 namespace TindeqTrainer.Api.Contracts;
 
 public record CreateMaxWeightRecordRequest(
-    string Hand,
-    double WeightKg,
+    double? LeftWeightKg,
+    double? RightWeightKg,
     DateTime? RecordedAt);

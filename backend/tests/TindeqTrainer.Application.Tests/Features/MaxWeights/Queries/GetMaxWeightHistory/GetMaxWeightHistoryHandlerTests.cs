@@ -1,7 +1,6 @@
 using FluentAssertions;
 using TindeqTrainer.Application.Features.MaxWeights.Queries.GetMaxWeightHistory;
 using TindeqTrainer.Domain.Entities;
-using TindeqTrainer.Domain.Enums;
 
 namespace TindeqTrainer.Application.Tests.Features.MaxWeights.Queries.GetMaxWeightHistory;
 
@@ -12,33 +11,21 @@ public class GetMaxWeightHistoryHandlerTests(IntegrationTestFactory factory) : I
     public async Task Handle_WhenCalled_ReturnsHistoryOrderedNewestFirst()
     {
         await InsertMany([
-            MaxWeightRecord.Create(Hand.Left, 40, new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc)),
-            MaxWeightRecord.Create(Hand.Right, 41, new DateTime(2026, 3, 17, 9, 0, 0, DateTimeKind.Utc)),
-            MaxWeightRecord.Create(Hand.Left, 42, new DateTime(2026, 3, 16, 10, 0, 0, DateTimeKind.Utc))
+            MaxWeightRecord.Create(40, null, new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc)),
+            MaxWeightRecord.Create(null, 41, new DateTime(2026, 3, 17, 9, 0, 0, DateTimeKind.Utc)),
+            MaxWeightRecord.Create(42, 43, new DateTime(2026, 3, 16, 10, 0, 0, DateTimeKind.Utc))
         ]);
 
         var handler = new GetMaxWeightHistoryHandler(DbContext);
 
         var result = await handler.Handle(new GetMaxWeightHistoryQuery(), CancellationToken.None);
 
-        result.Select(x => x.WeightKg).Should().ContainInOrder(41, 42, 40);
-        result.First().Hand.Should().Be("Right");
-    }
-
-    [Fact]
-    public async Task Handle_WhenHandFilterProvided_ReturnsOnlyThatHand()
-    {
-        await InsertMany([
-            MaxWeightRecord.Create(Hand.Left, 40, new DateTime(2026, 3, 15, 10, 0, 0, DateTimeKind.Utc)),
-            MaxWeightRecord.Create(Hand.Right, 41, new DateTime(2026, 3, 17, 9, 0, 0, DateTimeKind.Utc))
-        ]);
-
-        var handler = new GetMaxWeightHistoryHandler(DbContext);
-
-        var result = await handler.Handle(new GetMaxWeightHistoryQuery(Hand.Left), CancellationToken.None);
-
-        result.Should().HaveCount(1);
-        result.Single().Hand.Should().Be("Left");
-        result.Single().WeightKg.Should().Be(40);
+        result.Select(x => x.RecordedAt).Should().BeInDescendingOrder();
+        result[0].LeftWeightKg.Should().BeNull();
+        result[0].RightWeightKg.Should().Be(41);
+        result[1].LeftWeightKg.Should().Be(42);
+        result[1].RightWeightKg.Should().Be(43);
+        result[2].LeftWeightKg.Should().Be(40);
+        result[2].RightWeightKg.Should().BeNull();
     }
 }

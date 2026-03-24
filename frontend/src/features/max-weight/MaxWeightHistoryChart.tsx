@@ -59,17 +59,22 @@ interface BuiltPlotData {
   dayLabels: string[]
 }
 
+function getMaxValue(current: number | null, next: number | null | undefined): number | null {
+  if (next == null) {
+    return current;
+  }
+
+  return current === null ? next : Math.max(current, next);
+}
+
 function buildPlotData(records: MaxWeightRecord[]): BuiltPlotData {
   const recordsByDay = new Map<number, { Left: number | null; Right: number | null }>();
 
   for (const record of records) {
     const dayTimestamp = getLocalDayTimestamp(record.recordedAt);
     const dayEntry = recordsByDay.get(dayTimestamp) ?? { Left: null, Right: null };
-    const existingValue = dayEntry[record.hand];
-
-    dayEntry[record.hand] = existingValue === null
-      ? record.weightKg
-      : Math.max(existingValue, record.weightKg);
+    dayEntry.Left = getMaxValue(dayEntry.Left, record.leftWeightKg);
+    dayEntry.Right = getMaxValue(dayEntry.Right, record.rightWeightKg);
 
     recordsByDay.set(dayTimestamp, dayEntry);
   }
@@ -123,7 +128,7 @@ export function MaxWeightHistoryChart({
           },
         },
         y: {
-          range: (_plot, dataMin, dataMax) => {
+          range: (_plot, _dataMin, dataMax) => {
             const maxValue = Math.max(dataMax ?? 1, 1);
             return [0, maxValue * 1.1];
           },

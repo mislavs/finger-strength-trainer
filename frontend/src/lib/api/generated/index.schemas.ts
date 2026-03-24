@@ -4,10 +4,18 @@
  * TindeqTrainer.Api
  * OpenAPI spec version: 1.0
  */
+export interface CreateMaxWeightRecordRequest {
+  /** @nullable */
+  leftWeightKg?: number | null;
+  /** @nullable */
+  rightWeightKg?: number | null;
+  /** @nullable */
+  recordedAt?: string | null;
+}
+
 export interface CreateProtocolRequest {
   /** @nullable */
   name?: string | null;
-  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;
@@ -18,6 +26,13 @@ export interface CreateProtocolRequest {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
+}
+
+export interface CurrentMaxWeightsDto {
+  /** @nullable */
+  leftKg?: number | null;
+  /** @nullable */
+  rightKg?: number | null;
 }
 
 export interface DeviceStatusDto {
@@ -34,7 +49,6 @@ export interface ProtocolDto {
   id?: string;
   /** @nullable */
   name?: string | null;
-  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;
@@ -45,7 +59,6 @@ export interface ProtocolDto {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
-  targetWeightKg?: number;
 }
 
 export interface ProtocolSummaryDto {
@@ -61,7 +74,6 @@ export interface ProtocolSummaryDto {
 export interface UpdateProtocolRequest {
   /** @nullable */
   name?: string | null;
-  maxWeightKg?: number;
   weightPercentage?: number;
   repsPerSet?: number;
   numberOfSets?: number;

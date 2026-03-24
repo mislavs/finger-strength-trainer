@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TindeqTrainer.Domain.Enums;
 using TindeqTrainer.Infrastructure.Persistence;
 
 namespace TindeqTrainer.Application.Features.MaxWeights.Queries.GetCurrentMaxWeights;
@@ -13,16 +12,16 @@ public class GetCurrentMaxWeightsHandler(AppDbContext dbContext) : IRequestHandl
     {
         var leftKg = await dbContext.MaxWeightRecords
             .AsNoTracking()
-            .Where(x => x.Hand == Hand.Left)
+            .Where(x => x.LeftWeightKg != null)
             .OrderByDescending(x => x.RecordedAt)
-            .Select(x => (double?)x.WeightKg)
+            .Select(x => x.LeftWeightKg)
             .FirstOrDefaultAsync(cancellationToken);
 
         var rightKg = await dbContext.MaxWeightRecords
             .AsNoTracking()
-            .Where(x => x.Hand == Hand.Right)
+            .Where(x => x.RightWeightKg != null)
             .OrderByDescending(x => x.RecordedAt)
-            .Select(x => (double?)x.WeightKg)
+            .Select(x => x.RightWeightKg)
             .FirstOrDefaultAsync(cancellationToken);
 
         return new CurrentMaxWeightsDto(leftKg, rightKg);

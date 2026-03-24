@@ -6,7 +6,16 @@ public class CreateMaxWeightRecordValidator : AbstractValidator<CreateMaxWeightR
 {
     public CreateMaxWeightRecordValidator()
     {
-        RuleFor(x => x.WeightKg)
-            .GreaterThan(0);
+        RuleFor(x => x)
+            .Must(x => x.LeftWeightKg is not null || x.RightWeightKg is not null)
+            .WithMessage("At least one hand weight must be provided.");
+
+        RuleFor(x => x.LeftWeightKg)
+            .GreaterThan(0)
+            .When(x => x.LeftWeightKg is not null);
+
+        RuleFor(x => x.RightWeightKg)
+            .GreaterThan(0)
+            .When(x => x.RightWeightKg is not null);
     }
 }

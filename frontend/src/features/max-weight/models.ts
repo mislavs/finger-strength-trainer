@@ -1,5 +1,3 @@
-export type MaxWeightHand = "Left" | "Right";
-
 export interface CurrentMaxWeights {
   leftKg?: number | null
   rightKg?: number | null
@@ -7,13 +5,13 @@ export interface CurrentMaxWeights {
 
 export interface MaxWeightRecord {
   id: string
-  hand: MaxWeightHand
-  weightKg: number
+  leftWeightKg?: number | null
+  rightWeightKg?: number | null
   recordedAt: string
 }
 
 export interface CreateMaxWeightRecordInput {
-  hand: MaxWeightHand
-  weightKg: number
+  leftWeightKg?: number | null
+  rightWeightKg?: number | null
   recordedAt?: string
 }

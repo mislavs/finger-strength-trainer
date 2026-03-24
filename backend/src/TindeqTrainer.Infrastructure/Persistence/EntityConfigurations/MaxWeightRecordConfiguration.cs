@@ -10,18 +10,14 @@ public class MaxWeightRecordConfiguration : IEntityTypeConfiguration<MaxWeightRe
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Hand)
-            .HasConversion<string>()
-            .HasMaxLength(16)
-            .IsRequired();
+        builder.Property(x => x.LeftWeightKg);
 
-        builder.Property(x => x.WeightKg)
-            .IsRequired();
+        builder.Property(x => x.RightWeightKg);
 
         builder.Property(x => x.RecordedAt)
             .HasColumnType("TEXT")
             .IsRequired();
 
-        builder.HasIndex(x => new { x.Hand, x.RecordedAt });
+        builder.HasIndex(x => x.RecordedAt);
     }
 }

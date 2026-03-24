@@ -1,5 +1,3 @@
-using TindeqTrainer.Domain.Enums;
-
 namespace TindeqTrainer.Domain.Entities;
 
 public class MaxWeightRecord
@@ -10,28 +8,38 @@ public class MaxWeightRecord
 
     public Guid Id { get; private set; }
 
-    public Hand Hand { get; private set; }
+    public double? LeftWeightKg { get; private set; }
 
-    public double WeightKg { get; private set; }
+    public double? RightWeightKg { get; private set; }
 
     public DateTime RecordedAt { get; private set; }
 
     public static MaxWeightRecord Create(
-        Hand hand,
-        double weightKg,
+        double? leftWeightKg,
+        double? rightWeightKg,
         DateTime? recordedAt = null,
         Guid? id = null)
     {
-        if (weightKg <= 0)
+        if (leftWeightKg is null && rightWeightKg is null)
         {
-            throw new ArgumentOutOfRangeException(nameof(weightKg), "Weight must be greater than zero.");
+            throw new ArgumentException("At least one hand weight must be provided.");
+        }
+
+        if (leftWeightKg is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(leftWeightKg), "Left weight must be greater than zero.");
+        }
+
+        if (rightWeightKg is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rightWeightKg), "Right weight must be greater than zero.");
         }
 
         return new MaxWeightRecord
         {
             Id = id ?? Guid.NewGuid(),
-            Hand = hand,
-            WeightKg = weightKg,
+            LeftWeightKg = leftWeightKg,
+            RightWeightKg = rightWeightKg,
             RecordedAt = recordedAt ?? DateTime.UtcNow
         };
     }

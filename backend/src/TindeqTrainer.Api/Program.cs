@@ -71,7 +71,11 @@ try
 
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
-    app.UseHttpsRedirection();
+
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
 
     app.MapHub<TrainingHub>("/hubs/training");
     app.MapDeviceEndpoints();

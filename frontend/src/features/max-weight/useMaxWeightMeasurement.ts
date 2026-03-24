@@ -2,21 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ForceSamplePoint } from "@/components/ForceChart";
 import { useSignalR } from "@/hooks/useSignalR";
-import type { MaxWeightHand } from "@/features/max-weight/models";
 import { ensureConnected } from "@/lib/signalr/ensureConnected";
 import { getSignalRConnectionErrorMessage, toHubErrorMessage } from "@/lib/signalr/hubErrorMessage";
+
+type MeasurementHand = "Left" | "Right"
 
 interface UseMaxWeightMeasurementResult {
   currentForceKg: number
   leftPeakKg: number
   rightPeakKg: number
-  activeHand: MaxWeightHand
-  setActiveHand: (hand: MaxWeightHand) => void
+  activeHand: MeasurementHand
+  setActiveHand: (hand: MeasurementHand) => void
   isStreaming: boolean
   isBusy: boolean
   error: string | null
-  start: () => Promise<void>
-  stop: () => Promise<void>
+  start: () => Promise<boolean>
+  stop: () => Promise<boolean>
   resetPeaks: () => void
 }
 
@@ -31,11 +32,11 @@ export function useMaxWeightMeasurement(): UseMaxWeightMeasurementResult {
   const [currentForceKg, setCurrentForceKg] = useState(0);
   const [leftPeakKg, setLeftPeakKg] = useState(0);
   const [rightPeakKg, setRightPeakKg] = useState(0);
-  const [activeHand, setActiveHandState] = useState<MaxWeightHand>("Left");
+  const [activeHand, setActiveHandState] = useState<MeasurementHand>("Left");
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeCommand, setActiveCommand] = useState<MeasurementCommand | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const activeHandRef = useRef<MaxWeightHand>("Left");
+  const activeHandRef = useRef<MeasurementHand>("Left");
   const isStreamingRef = useRef(false);
 
   const setStreamingState = useCallback((nextValue: boolean) => {
@@ -43,7 +44,7 @@ export function useMaxWeightMeasurement(): UseMaxWeightMeasurementResult {
     setIsStreaming(nextValue);
   }, []);
 
-  const setActiveHand = useCallback((hand: MaxWeightHand) => {
+  const setActiveHand = useCallback((hand: MeasurementHand) => {
     activeHandRef.current = hand;
     setActiveHandState(hand);
   }, []);
@@ -113,25 +114,27 @@ export function useMaxWeightMeasurement(): UseMaxWeightMeasurementResult {
     [connection],
   );
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (): Promise<boolean> => {
     setCurrentForceKg(0);
 
     const succeeded = await runCommand("StartLiveStream");
     if (!succeeded) {
-      return;
+      return false;
     }
 
     setStreamingState(true);
+    return true;
   }, [runCommand, setStreamingState]);
 
-  const stop = useCallback(async () => {
+  const stop = useCallback(async (): Promise<boolean> => {
     const succeeded = await runCommand("StopLiveStream");
     if (!succeeded) {
-      return;
+      return false;
     }
 
     setStreamingState(false);
     setCurrentForceKg(0);
+    return true;
   }, [runCommand, setStreamingState]);
 
   const resetPeaks = useCallback(() => {

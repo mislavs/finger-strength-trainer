@@ -2,6 +2,6 @@ namespace TindeqTrainer.Application.Features.MaxWeights.Queries.GetMaxWeightHist
 
 public record MaxWeightRecordDto(
     Guid Id,
-    string Hand,
-    double WeightKg,
+    double? LeftWeightKg,
+    double? RightWeightKg,
     DateTime RecordedAt);
