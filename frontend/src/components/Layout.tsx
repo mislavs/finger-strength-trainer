@@ -13,15 +13,17 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
             {navigationItems.map((item) => (
               <NavLink key={item.to} to={item.to} className={({ isActive }) => navClassName(isActive)}>
                 {item.label}
               </NavLink>
             ))}
           </div>
-          <ConnectionBar />
+          <div className="w-full lg:min-w-0 lg:flex-1">
+            <ConnectionBar />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4">

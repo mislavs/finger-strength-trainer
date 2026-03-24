@@ -114,8 +114,8 @@ export function ConnectionBar() {
   const primaryAction = getPrimaryAction(connectionState, isBusy, connect, cancelConnect, disconnect);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+    <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
         <span className={`size-2 rounded-full ${connectionBarStateDotClasses[connectionState]}`} />
         <Badge variant={isConnected ? "default" : "secondary"}>
           {connectionBarStateLabels[connectionState]}
@@ -130,6 +130,7 @@ export function ConnectionBar() {
         variant={primaryAction.variant}
         onClick={primaryAction.onClick}
         disabled={primaryAction.disabled}
+        className="shrink-0"
       >
         {primaryAction.label}
       </Button>
