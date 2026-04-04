@@ -9,7 +9,7 @@ public class DependencyTests
     [Fact]
     public void Domain_Should_Not_Reference_Infrastructure()
     {
-        var result = Types.InAssembly(typeof(Protocol).Assembly)
+        var result = Types.InAssembly(typeof(RepeaterProtocol).Assembly)
             .ShouldNot()
             .HaveDependencyOn("TindeqTrainer.Infrastructure")
             .GetResult();
@@ -20,7 +20,7 @@ public class DependencyTests
     [Fact]
     public void Domain_Should_Not_Reference_Application()
     {
-        var result = Types.InAssembly(typeof(Protocol).Assembly)
+        var result = Types.InAssembly(typeof(RepeaterProtocol).Assembly)
             .ShouldNot()
             .HaveDependencyOn("TindeqTrainer.Application")
             .GetResult();

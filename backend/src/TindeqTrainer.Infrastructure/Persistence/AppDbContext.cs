@@ -9,7 +9,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
     private static readonly Guid EnduranceProtocolId = new("2cf4e16b-c3a7-4dfa-8944-b1d6b2384f89");
     private static readonly Guid ShortPowerProtocolId = new("d53a3ea5-d9bf-43a6-8ff8-e8f7c7f07f0a");
 
-    public DbSet<Protocol> Protocols => Set<Protocol>();
+    public DbSet<RepeaterProtocol> RepeaterProtocols => Set<RepeaterProtocol>();
+
+    public DbSet<WorkoutProtocol> WorkoutProtocols => Set<WorkoutProtocol>();
+
+    public DbSet<WorkoutProtocolItem> WorkoutProtocolItems => Set<WorkoutProtocolItem>();
 
     public DbSet<MaxWeightRecord> MaxWeightRecords => Set<MaxWeightRecord>();
 
@@ -17,7 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> _options) : DbContext(_
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
-        modelBuilder.Entity<Protocol>().HasData(
+        modelBuilder.Entity<RepeaterProtocol>().HasData(
             new
             {
                 Id = MaxRepeatersProtocolId,

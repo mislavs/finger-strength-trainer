@@ -41,6 +41,28 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
                     cancellationToken);
                 return true;
 
+            case ConflictException conflictException:
+                logger.LogWarning(
+                    conflictException,
+                    "Conflict for {RequestMethod} {RequestPath}: {Message}",
+                    httpContext.Request.Method,
+                    httpContext.Request.Path,
+                    conflictException.Message);
+
+                var conflictProblem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = conflictException.Message
+                };
+
+                AddTraceId(conflictProblem, httpContext.TraceIdentifier);
+                await WriteProblemResponse(
+                    httpContext,
+                    conflictProblem,
+                    StatusCodes.Status409Conflict,
+                    cancellationToken);
+                return true;
+
             case NotFoundException notFoundException:
                 logger.LogWarning(
                     notFoundException,

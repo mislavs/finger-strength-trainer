@@ -1,0 +1,37 @@
+using FluentValidation;
+
+namespace TindeqTrainer.Application.Features.RepeaterProtocols.Commands.CreateRepeaterProtocol;
+
+public class CreateRepeaterProtocolValidator : AbstractValidator<CreateRepeaterProtocolCommand>
+{
+    public CreateRepeaterProtocolValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .MaximumLength(150);
+
+        RuleFor(x => x.WeightPercentage)
+            .InclusiveBetween(0, 100);
+
+        RuleFor(x => x.RepsPerSet)
+            .GreaterThan(0);
+
+        RuleFor(x => x.NumberOfSets)
+            .GreaterThan(0);
+
+        RuleFor(x => x.WorkSeconds)
+            .GreaterThan(0);
+
+        RuleFor(x => x.RestSeconds)
+            .GreaterThanOrEqualTo(0);
+
+        RuleFor(x => x.HandSwitchSeconds)
+            .GreaterThanOrEqualTo(0);
+
+        RuleFor(x => x.SetRestSeconds)
+            .GreaterThanOrEqualTo(0);
+
+        RuleFor(x => x.CountdownSeconds)
+            .GreaterThanOrEqualTo(0);
+    }
+}

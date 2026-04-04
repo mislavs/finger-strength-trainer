@@ -80,7 +80,8 @@ try
     app.MapHub<TrainingHub>("/hubs/training");
     app.MapDeviceEndpoints();
     app.MapMaxWeightEndpoints();
-    app.MapProtocolEndpoints();
+    app.MapRepeaterProtocolEndpoints();
+    app.MapWorkoutProtocolEndpoints();
 
 
     app.MapGet("/", () => Results.Ok("TindeqTrainer API is running."));

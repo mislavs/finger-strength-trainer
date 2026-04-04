@@ -39,7 +39,7 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
                     b.ToTable("MaxWeightRecords");
                 });
 
-            modelBuilder.Entity("TindeqTrainer.Domain.Entities.Protocol", b =>
+            modelBuilder.Entity("TindeqTrainer.Domain.Entities.RepeaterProtocol", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -82,7 +82,7 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Protocols");
+                    b.ToTable("RepeaterProtocols");
 
                     b.HasData(
                         new
@@ -130,6 +130,75 @@ namespace TindeqTrainer.Infrastructure.Persistence.Migrations
                             WeightPercentage = 90.0,
                             WorkSeconds = 5.0
                         });
+                });
+
+            modelBuilder.Entity("TindeqTrainer.Domain.Entities.WorkoutProtocol", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WorkoutProtocols");
+                });
+
+            modelBuilder.Entity("TindeqTrainer.Domain.Entities.WorkoutProtocolItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RepeaterProtocolId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Repetitions")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("RestAfterSeconds")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("WorkoutProtocolId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RepeaterProtocolId");
+
+                    b.HasIndex("WorkoutProtocolId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("WorkoutProtocolItems");
+                });
+
+            modelBuilder.Entity("TindeqTrainer.Domain.Entities.WorkoutProtocolItem", b =>
+                {
+                    b.HasOne("TindeqTrainer.Domain.Entities.RepeaterProtocol", "RepeaterProtocol")
+                        .WithMany()
+                        .HasForeignKey("RepeaterProtocolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TindeqTrainer.Domain.Entities.WorkoutProtocol", null)
+                        .WithMany("Items")
+                        .HasForeignKey("WorkoutProtocolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RepeaterProtocol");
+                });
+
+            modelBuilder.Entity("TindeqTrainer.Domain.Entities.WorkoutProtocol", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

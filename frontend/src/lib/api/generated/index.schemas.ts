@@ -13,7 +13,7 @@ export interface CreateMaxWeightRecordRequest {
   recordedAt?: string | null;
 }
 
-export interface CreateProtocolRequest {
+export interface CreateRepeaterProtocolRequest {
   /** @nullable */
   name?: string | null;
   weightPercentage?: number;
@@ -26,6 +26,19 @@ export interface CreateProtocolRequest {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
+}
+
+export interface WorkoutProtocolItemRequest {
+  repeaterProtocolId?: string;
+  repetitions?: number;
+  restAfterSeconds?: number;
+}
+
+export interface CreateWorkoutProtocolRequest {
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  items?: WorkoutProtocolItemRequest[] | null;
 }
 
 export interface CurrentMaxWeightsDto {
@@ -45,7 +58,7 @@ export interface DeviceStatusDto {
   firmwareVersion?: string | null;
 }
 
-export interface ProtocolDto {
+export interface RepeaterProtocolDto {
   id?: string;
   /** @nullable */
   name?: string | null;
@@ -61,7 +74,7 @@ export interface ProtocolDto {
   countdownBeeps?: boolean;
 }
 
-export interface ProtocolSummaryDto {
+export interface RepeaterProtocolSummaryDto {
   id?: string;
   /** @nullable */
   name?: string | null;
@@ -71,7 +84,7 @@ export interface ProtocolSummaryDto {
   workSeconds?: number;
 }
 
-export interface UpdateProtocolRequest {
+export interface UpdateRepeaterProtocolRequest {
   /** @nullable */
   name?: string | null;
   weightPercentage?: number;
@@ -84,5 +97,46 @@ export interface UpdateProtocolRequest {
   countdownSeconds?: number;
   audioCues?: boolean;
   countdownBeeps?: boolean;
+}
+
+export interface UpdateWorkoutProtocolRequest {
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  items?: WorkoutProtocolItemRequest[] | null;
+}
+
+export interface WorkoutProtocolItemDto {
+  repeaterProtocolId?: string;
+  /** @nullable */
+  repeaterProtocolName?: string | null;
+  repetitions?: number;
+  restAfterSeconds?: number;
+  weightPercentage?: number;
+  repsPerSet?: number;
+  numberOfSets?: number;
+  workSeconds?: number;
+  restSeconds?: number;
+  handSwitchSeconds?: number;
+  setRestSeconds?: number;
+  countdownSeconds?: number;
+  audioCues?: boolean;
+  countdownBeeps?: boolean;
+}
+
+export interface WorkoutProtocolDto {
+  id?: string;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  items?: WorkoutProtocolItemDto[] | null;
+}
+
+export interface WorkoutProtocolSummaryDto {
+  id?: string;
+  /** @nullable */
+  name?: string | null;
+  itemCount?: number;
+  totalBlocks?: number;
 }
 

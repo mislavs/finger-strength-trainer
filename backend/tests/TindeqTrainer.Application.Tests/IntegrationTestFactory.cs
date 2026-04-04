@@ -24,6 +24,7 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
     public async ValueTask ResetDatabase()
     {
+        DbContext.ChangeTracker.Clear();
         await _respawner.ResetAsync(_connection);
         await SeedStarterProtocolsAsync();
         DbContext.ChangeTracker.Clear();
@@ -69,19 +70,19 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
     private async Task SeedStarterProtocolsAsync()
     {
-        if (await DbContext.Protocols.AnyAsync())
+        if (await DbContext.RepeaterProtocols.AnyAsync())
         {
             return;
         }
 
         var starterProtocols = new[]
         {
-            Protocol.Create("Max Repeaters 80%", 80d, 6, 1, 7d, 3d, 30d, 0d, 5d, true, true, MaxRepeatersProtocolId),
-            Protocol.Create("Endurance 60%", 60d, 10, 1, 7d, 3d, 30d, 0d, 5d, true, true, EnduranceProtocolId),
-            Protocol.Create("Short Power 90%", 90d, 4, 1, 5d, 5d, 30d, 0d, 5d, true, true, ShortPowerProtocolId)
+            RepeaterProtocol.Create("Max Repeaters 80%", 80d, 6, 1, 7d, 3d, 30d, 0d, 5d, true, true, MaxRepeatersProtocolId),
+            RepeaterProtocol.Create("Endurance 60%", 60d, 10, 1, 7d, 3d, 30d, 0d, 5d, true, true, EnduranceProtocolId),
+            RepeaterProtocol.Create("Short Power 90%", 90d, 4, 1, 5d, 5d, 30d, 0d, 5d, true, true, ShortPowerProtocolId)
         };
 
-        await DbContext.Protocols.AddRangeAsync(starterProtocols);
+        await DbContext.RepeaterProtocols.AddRangeAsync(starterProtocols);
         await DbContext.SaveChangesAsync();
     }
 }

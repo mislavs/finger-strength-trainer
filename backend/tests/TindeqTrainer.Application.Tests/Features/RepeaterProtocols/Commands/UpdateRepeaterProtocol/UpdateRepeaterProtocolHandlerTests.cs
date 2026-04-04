@@ -1,0 +1,91 @@
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using TindeqTrainer.Application.Features.RepeaterProtocols.Commands.UpdateRepeaterProtocol;
+using TindeqTrainer.Domain.Entities;
+using TindeqTrainer.Domain.Exceptions;
+
+namespace TindeqTrainer.Application.Tests.Features.RepeaterProtocols.Commands.UpdateRepeaterProtocol;
+
+[Collection(nameof(IntegrationTestsCollection))]
+public class UpdateRepeaterProtocolHandlerTests(IntegrationTestFactory factory) : IntegrationTest(factory)
+{
+    [Fact]
+    public async Task Handle_WhenProtocolExists_UpdatesRepeaterProtocol()
+    {
+        // Arrange
+        var protocol = RepeaterProtocol.Create(
+            name: "Original",
+            weightPercentage: 70,
+            repsPerSet: 6,
+            numberOfSets: 1,
+            workSeconds: 7,
+            restSeconds: 3,
+            handSwitchSeconds: 30,
+            setRestSeconds: 0,
+            countdownSeconds: 5,
+            audioCues: false,
+            countdownBeeps: false);
+        await Insert(protocol);
+
+        var handler = new UpdateRepeaterProtocolHandler(DbContext);
+        var command = new UpdateRepeaterProtocolCommand(
+            Id: protocol.Id,
+            Name: "Updated",
+            WeightPercentage: 80,
+            RepsPerSet: 8,
+            NumberOfSets: 3,
+            WorkSeconds: 10,
+            RestSeconds: 4,
+            HandSwitchSeconds: 25,
+            SetRestSeconds: 180,
+            CountdownSeconds: 3,
+            AudioCues: true,
+            CountdownBeeps: true);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        var updated = await DbContext.RepeaterProtocols
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == protocol.Id, TestContext.Current.CancellationToken);
+
+        updated.Name.Should().Be("Updated");
+        updated.WeightPercentage.Should().Be(80);
+        updated.RepsPerSet.Should().Be(8);
+        updated.NumberOfSets.Should().Be(3);
+        updated.WorkSeconds.Should().Be(10);
+        updated.RestSeconds.Should().Be(4);
+        updated.HandSwitchSeconds.Should().Be(25);
+        updated.SetRestSeconds.Should().Be(180);
+        updated.CountdownSeconds.Should().Be(3);
+        updated.AudioCues.Should().BeTrue();
+        updated.CountdownBeeps.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_WhenProtocolDoesNotExist_ThrowsNotFoundException()
+    {
+        // Arrange
+        var handler = new UpdateRepeaterProtocolHandler(DbContext);
+        var command = new UpdateRepeaterProtocolCommand(
+            Id: Guid.NewGuid(),
+            Name: "Missing",
+            WeightPercentage: 70,
+            RepsPerSet: 6,
+            NumberOfSets: 1,
+            WorkSeconds: 7,
+            RestSeconds: 3,
+            HandSwitchSeconds: 30,
+            SetRestSeconds: 0,
+            CountdownSeconds: 5,
+            AudioCues: true,
+            CountdownBeeps: true);
+
+        // Act
+        Func<Task> act = () => handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+}

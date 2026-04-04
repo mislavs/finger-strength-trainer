@@ -21,13 +21,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentMaxWeights } from "@/features/max-weight/hooks";
-import { DeleteProtocolDialog } from "@/features/protocols/DeleteProtocolDialog";
-import { ProtocolFieldError, ProtocolNumberField, getProtocolFieldErrorMessage } from "@/features/protocols/ProtocolFieldControls";
-import { protocolNumericFields } from "@/features/protocols/protocol-form.constants";
-import { useProtocol, useProtocols, useUpdateProtocol } from "@/features/protocols/hooks";
-import { protocolFieldNames, toProtocolInput, type Protocol, type ProtocolInput, type ProtocolSummary } from "@/features/protocols/models";
-import { ProtocolFlowFields } from "@/features/protocols/ProtocolFlowFields";
-import { protocolSchema, type ProtocolFormValues } from "@/features/protocols/schema";
+import { DeleteRepeaterProtocolDialog } from "@/features/repeater-protocols/DeleteRepeaterProtocolDialog";
+import {
+  RepeaterProtocolFieldError,
+  RepeaterProtocolNumberField,
+  getRepeaterProtocolFieldErrorMessage,
+} from "@/features/repeater-protocols/RepeaterProtocolFieldControls";
+import { repeaterProtocolNumericFields } from "@/features/repeater-protocols/repeater-protocol-form.constants";
+import {
+  useRepeaterProtocol,
+  useRepeaterProtocols,
+  useUpdateRepeaterProtocol,
+} from "@/features/repeater-protocols/hooks";
+import {
+  repeaterProtocolFieldNames,
+  toRepeaterProtocolInput,
+  type RepeaterProtocol,
+  type RepeaterProtocolInput,
+  type RepeaterProtocolSummary,
+} from "@/features/repeater-protocols/models";
+import { RepeaterProtocolFlowFields } from "@/features/repeater-protocols/RepeaterProtocolFlowFields";
+import { repeaterProtocolSchema, type RepeaterProtocolFormValues } from "@/features/repeater-protocols/schema";
 import { TimerDisplay } from "@/features/repeater/TimerDisplay";
 import { TimerPhase, type TimerHand, type TimerProtocol } from "@/features/repeater/models";
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
@@ -59,7 +73,7 @@ function shouldRestartRepeaterForceStream(phase: TimerPhase): boolean {
     || phase === TimerPhase.Rest;
 }
 
-function toTimerProtocol(protocol: Protocol): TimerProtocol {
+function toTimerProtocol(protocol: RepeaterProtocol): TimerProtocol {
   return {
     repsPerSet: protocol.repsPerSet,
     numberOfSets: protocol.numberOfSets,
@@ -72,12 +86,12 @@ function toTimerProtocol(protocol: Protocol): TimerProtocol {
 }
 
 export function RepeaterPage() {
-  const protocolsQuery = useProtocols();
-  const updateProtocol = useUpdateProtocol();
+  const repeaterProtocolsQuery = useRepeaterProtocols();
+  const updateRepeaterProtocol = useUpdateRepeaterProtocol();
   const currentMaxWeightsQuery = useCurrentMaxWeights();
   const { status: deviceStatus, isReconnecting, reconnectionFailed } = useDeviceStatus();
-  const [selectedProtocolId, setSelectedProtocolId] = useState("");
-  const [protocolToDelete, setProtocolToDelete] = useState<ProtocolSummary | null>(null);
+  const [selectedRepeaterProtocolId, setSelectedRepeaterProtocolId] = useState("");
+  const [repeaterProtocolToDelete, setRepeaterProtocolToDelete] = useState<RepeaterProtocolSummary | null>(null);
   const [startWarningOpen, setStartWarningOpen] = useState(false);
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [stopDialogPausedTimer, setStopDialogPausedTimer] = useState(false);
@@ -106,8 +120,8 @@ export function RepeaterPage() {
       void repeaterStream.stop();
     },
   });
-  const form = useForm<ProtocolFormValues>({
-    resolver: zodResolver(protocolSchema),
+  const form = useForm<RepeaterProtocolFormValues>({
+    resolver: zodResolver(repeaterProtocolSchema),
     defaultValues: {
       name: "",
       weightPercentage: 0,
@@ -130,33 +144,33 @@ export function RepeaterPage() {
   const rightReferenceMaxWeightKg = toNonNegativeNumber(sessionRightMaxWeightKg ?? currentMaxWeightsQuery.data?.rightKg);
   const leftTargetWeightKg = computeTargetWeightKg(leftReferenceMaxWeightKg, toNonNegativeNumber(weightPercentage));
   const rightTargetWeightKg = computeTargetWeightKg(rightReferenceMaxWeightKg, toNonNegativeNumber(weightPercentage));
-  const effectiveSelectedProtocolId = useMemo(() => {
-    const protocols = protocolsQuery.data ?? [];
+  const effectiveSelectedRepeaterProtocolId = useMemo(() => {
+    const protocols = repeaterProtocolsQuery.data ?? [];
 
     if (!protocols.length) {
       return "";
     }
 
-    if (selectedProtocolId && protocols.some((protocol) => protocol.id === selectedProtocolId)) {
-      return selectedProtocolId;
+    if (selectedRepeaterProtocolId && protocols.some((protocol) => protocol.id === selectedRepeaterProtocolId)) {
+      return selectedRepeaterProtocolId;
     }
 
     return protocols[0].id;
-  }, [protocolsQuery.data, selectedProtocolId]);
+  }, [repeaterProtocolsQuery.data, selectedRepeaterProtocolId]);
 
-  const selectedProtocolQuery = useProtocol(effectiveSelectedProtocolId);
-  const selectedProtocol = selectedProtocolQuery.data;
-  const timerProtocol = selectedProtocol ? toTimerProtocol(selectedProtocol) : null;
+  const selectedRepeaterProtocolQuery = useRepeaterProtocol(effectiveSelectedRepeaterProtocolId);
+  const selectedRepeaterProtocol = selectedRepeaterProtocolQuery.data;
+  const timerProtocol = selectedRepeaterProtocol ? toTimerProtocol(selectedRepeaterProtocol) : null;
   const { resumeAudioContext } = useAudioCues(timer.state, {
-    audioCues: selectedProtocol?.audioCues ?? false,
-    countdownBeeps: selectedProtocol?.countdownBeeps ?? false,
+    audioCues: selectedRepeaterProtocol?.audioCues ?? false,
+    countdownBeeps: selectedRepeaterProtocol?.countdownBeeps ?? false,
   });
   const hasSessionStarted = timer.state.phase !== TimerPhase.Idle;
   const canConfigure = timer.state.phase === TimerPhase.Idle;
   const isPaused = timer.state.phase === TimerPhase.Paused;
   const isSessionRunning = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
   const requiresStopConfirmation = hasSessionStarted && timer.state.phase !== TimerPhase.Done;
-  const isSavingProtocol = updateProtocol.isPending;
+  const isSavingProtocol = updateRepeaterProtocol.isPending;
   const hasForceSamples = repeaterStream.samples.length > 0;
   const showForceChart = hasSessionStarted
     && shouldShowRepeaterForceChart(timer.state.phase)
@@ -165,17 +179,17 @@ export function RepeaterPage() {
   const activeHandReferenceMaxWeightKg = timer.state.currentHand === "right"
     ? rightReferenceMaxWeightKg
     : leftReferenceMaxWeightKg;
-  const targetForceKg = isWorkPhase && selectedProtocol
-    ? computeTargetWeightKg(activeHandReferenceMaxWeightKg, selectedProtocol.weightPercentage)
+  const targetForceKg = isWorkPhase && selectedRepeaterProtocol
+    ? computeTargetWeightKg(activeHandReferenceMaxWeightKg, selectedRepeaterProtocol.weightPercentage)
     : undefined;
 
-  const selectedProtocolSummary = useMemo(
-    () => protocolsQuery.data?.find((protocol) => protocol.id === effectiveSelectedProtocolId) ?? null,
-    [effectiveSelectedProtocolId, protocolsQuery.data],
+  const selectedRepeaterProtocolSummary = useMemo(
+    () => repeaterProtocolsQuery.data?.find((protocol) => protocol.id === effectiveSelectedRepeaterProtocolId) ?? null,
+    [effectiveSelectedRepeaterProtocolId, repeaterProtocolsQuery.data],
   );
-  const hasProtocols = Boolean(protocolsQuery.data?.length);
+  const hasRepeaterProtocols = Boolean(repeaterProtocolsQuery.data?.length);
 
-  const closeDeleteDialog = () => setProtocolToDelete(null);
+  const closeDeleteDialog = () => setRepeaterProtocolToDelete(null);
   const handleDeleteDialogChange = (open: boolean) => {
     if (!open) {
       closeDeleteDialog();
@@ -183,7 +197,7 @@ export function RepeaterPage() {
   };
   const canStartTimer =
     Boolean(timerProtocol) &&
-    !selectedProtocolQuery.isLoading &&
+    !selectedRepeaterProtocolQuery.isLoading &&
     !form.formState.isDirty &&
     !isSavingProtocol;
 
@@ -209,12 +223,12 @@ export function RepeaterPage() {
   }, [deviceStatus.isConnected, repeaterStream, timer]);
 
   useEffect(() => {
-    if (!selectedProtocol) {
+    if (!selectedRepeaterProtocol) {
       return;
     }
 
-    form.reset(toProtocolInput(selectedProtocol));
-  }, [form, selectedProtocol]);
+    form.reset(toRepeaterProtocolInput(selectedRepeaterProtocol));
+  }, [form, selectedRepeaterProtocol]);
 
   useEffect(() => {
     if (!isReconnecting || !hasSessionStarted || timer.state.phase === TimerPhase.Done || timer.state.phase === TimerPhase.Paused) {
@@ -257,19 +271,19 @@ export function RepeaterPage() {
     return () => window.clearTimeout(timeoutId);
   }, [deviceStatus.isConnected, handleResume, isReconnecting, stopDialogOpen, timer.state.phase]);
 
-  async function handleProtocolSave(values: ProtocolFormValues): Promise<void> {
-    if (!selectedProtocol) {
+  async function handleProtocolSave(values: RepeaterProtocolFormValues): Promise<void> {
+    if (!selectedRepeaterProtocol) {
       return;
     }
 
-    const request: ProtocolInput = {
-      ...toProtocolInput(selectedProtocol),
+    const request: RepeaterProtocolInput = {
+      ...toRepeaterProtocolInput(selectedRepeaterProtocol),
       ...values,
       setRestSeconds: values.setRestSeconds * secondsPerMinute,
     };
 
     try {
-      await updateProtocol.mutateAsync({ id: selectedProtocol.id, data: request });
+      await updateRepeaterProtocol.mutateAsync({ id: selectedRepeaterProtocol.id, data: request });
       form.reset({
         ...values,
         setRestSeconds: values.setRestSeconds,
@@ -282,11 +296,11 @@ export function RepeaterPage() {
 
       if (error.errors) {
         for (const [fieldName, messages] of Object.entries(error.errors)) {
-          if (!protocolFieldNames.includes(fieldName as keyof ProtocolInput)) {
+          if (!repeaterProtocolFieldNames.includes(fieldName as keyof RepeaterProtocolInput)) {
             continue;
           }
 
-          form.setError(fieldName as keyof ProtocolFormValues, {
+          form.setError(fieldName as keyof RepeaterProtocolFormValues, {
             type: "server",
             message: messages[0],
           });
@@ -428,49 +442,49 @@ export function RepeaterPage() {
         </div>
       </div>
 
-      {!protocolsQuery.isLoading && !hasProtocols ? (
+      {!repeaterProtocolsQuery.isLoading && !hasRepeaterProtocols ? (
         <Card>
           <CardHeader>
-            <CardTitle>No protocols yet</CardTitle>
-            <CardDescription>Create your first protocol to configure a repeater session.</CardDescription>
+            <CardTitle>No repeater protocols yet</CardTitle>
+            <CardDescription>Create your first repeater protocol to configure a repeater session.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to={appRoutes.protocolsNew}>
+              <Link to={appRoutes.repeaterProtocolsNew}>
                 <Plus className="size-4" />
-                New Protocol
+                New Repeater Protocol
               </Link>
             </Button>
           </CardContent>
         </Card>
       ) : null}
 
-      {!hasSessionStarted && (protocolsQuery.isLoading || hasProtocols) ? (
+      {!hasSessionStarted && (repeaterProtocolsQuery.isLoading || hasRepeaterProtocols) ? (
         <>
           <Card>
             <CardHeader>
               <CardTitle>Session Setup</CardTitle>
-              <CardDescription>Choose a protocol and the hand you want to start with.</CardDescription>
+              <CardDescription>Choose a repeater protocol and the hand you want to start with.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
                 <div className="flex items-end gap-3">
                   <div className="min-w-0 flex-1 space-y-2">
                     <label className="text-sm font-medium" htmlFor="protocol-select">
-                      Protocol
+                      Repeater Protocol
                     </label>
 
-                    {protocolsQuery.isLoading ? (
+                    {repeaterProtocolsQuery.isLoading ? (
                       <Skeleton className="h-10 w-full" />
                     ) : (
                       <select
                         id="protocol-select"
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={effectiveSelectedProtocolId}
-                        onChange={(event) => setSelectedProtocolId(event.target.value)}
+                        value={effectiveSelectedRepeaterProtocolId}
+                        onChange={(event) => setSelectedRepeaterProtocolId(event.target.value)}
                         disabled={!canConfigure}
                       >
-                        {protocolsQuery.data?.map((protocol) => (
+                        {repeaterProtocolsQuery.data?.map((protocol) => (
                           <option key={protocol.id} value={protocol.id}>
                             {protocol.name}
                           </option>
@@ -481,7 +495,7 @@ export function RepeaterPage() {
 
                   <div className="flex shrink-0 gap-2">
                     <Button asChild type="button" variant="outline" size="sm">
-                      <Link to={appRoutes.protocolsNew}>
+                      <Link to={appRoutes.repeaterProtocolsNew}>
                         <Plus className="size-4" />
                         New
                       </Link>
@@ -490,8 +504,8 @@ export function RepeaterPage() {
                       type="button"
                       variant="destructive"
                       size="sm"
-                      disabled={!selectedProtocolSummary}
-                      onClick={() => selectedProtocolSummary && setProtocolToDelete(selectedProtocolSummary)}
+                      disabled={!selectedRepeaterProtocolSummary}
+                      onClick={() => selectedRepeaterProtocolSummary && setRepeaterProtocolToDelete(selectedRepeaterProtocolSummary)}
                     >
                       <Trash2 className="size-4" />
                       Delete
@@ -568,23 +582,23 @@ export function RepeaterPage() {
             </CardContent>
           </Card>
 
-          {selectedProtocolQuery.isLoading && effectiveSelectedProtocolId ? (
+          {selectedRepeaterProtocolQuery.isLoading && effectiveSelectedRepeaterProtocolId ? (
             <Skeleton className="h-52 w-full" />
           ) : null}
 
-          {protocolsQuery.isError ? (
+          {repeaterProtocolsQuery.isError ? (
             <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              Failed to load protocols. Please try again.
+              Failed to load repeater protocols. Please try again.
             </p>
           ) : null}
 
-          {selectedProtocolQuery.isError ? (
+          {selectedRepeaterProtocolQuery.isError ? (
             <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              Failed to load the selected protocol.
+              Failed to load the selected repeater protocol.
             </p>
           ) : null}
 
-          {selectedProtocol ? (
+          {selectedRepeaterProtocol ? (
             <Card>
               <CardContent>
                 <form className="space-y-4" onSubmit={form.handleSubmit(handleProtocolSave)}>
@@ -595,14 +609,14 @@ export function RepeaterPage() {
                       disabled={!canConfigure || isSavingProtocol}
                       {...form.register("name")}
                     />
-                    <ProtocolFieldError message={getProtocolFieldErrorMessage(form.formState.errors.name?.message)} />
+                    <RepeaterProtocolFieldError message={getRepeaterProtocolFieldErrorMessage(form.formState.errors.name?.message)} />
                   </div>
 
                   <section className="space-y-3">
                     <h2 className="font-medium">Load</h2>
-                    <ProtocolNumberField
+                    <RepeaterProtocolNumberField
                       form={form}
-                      field={protocolNumericFields.weightPercentage}
+                      field={repeaterProtocolNumericFields.weightPercentage}
                       disabled={!canConfigure || isSavingProtocol}
                       description="Percent of your current per-hand max weight."
                     />
@@ -611,7 +625,7 @@ export function RepeaterPage() {
                     </p>
                   </section>
 
-                  <ProtocolFlowFields form={form} disabled={!canConfigure || isSavingProtocol} />
+                  <RepeaterProtocolFlowFields form={form} disabled={!canConfigure || isSavingProtocol} />
 
                   <div className="flex flex-wrap justify-end gap-2">
                     <div className="flex flex-wrap gap-2">
@@ -619,7 +633,7 @@ export function RepeaterPage() {
                         type="button"
                         variant="outline"
                         disabled={!form.formState.isDirty || isSavingProtocol}
-                        onClick={() => form.reset(toProtocolInput(selectedProtocol))}
+                        onClick={() => form.reset(toRepeaterProtocolInput(selectedRepeaterProtocol))}
                       >
                         Reset
                       </Button>
@@ -697,7 +711,11 @@ export function RepeaterPage() {
         </p>
       ) : null}
 
-      <DeleteProtocolDialog protocol={protocolToDelete} open={Boolean(protocolToDelete)} onOpenChange={handleDeleteDialogChange} />
+      <DeleteRepeaterProtocolDialog
+        protocol={repeaterProtocolToDelete}
+        open={Boolean(repeaterProtocolToDelete)}
+        onOpenChange={handleDeleteDialogChange}
+      />
       <Dialog open={startWarningOpen} onOpenChange={setStartWarningOpen}>
         <DialogContent>
           <DialogHeader>
