@@ -1,3 +1,5 @@
+import { Battery, Bluetooth, Cpu } from "lucide-react";
+
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,15 +116,29 @@ export function ConnectionBar() {
   const primaryAction = getPrimaryAction(connectionState, isBusy, connect, cancelConnect, disconnect);
 
   return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-        <span className={`size-2 rounded-full ${connectionBarStateDotClasses[connectionState]}`} />
-        <Badge variant={isConnected ? "default" : "secondary"}>
-          {connectionBarStateLabels[connectionState]}
-        </Badge>
-        <span className="text-muted-foreground">Name: {status.deviceName ?? "--"}</span>
-        <span className="text-muted-foreground">Battery: {formatBatteryVoltage(status.batteryVoltage)}</span>
-        <span className="text-muted-foreground">Firmware: {status.firmwareVersion ?? "--"}</span>
+    <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
+        <div className="flex items-center gap-1.5">
+          <span className={`size-2 rounded-full ${connectionBarStateDotClasses[connectionState]}`} />
+          <Badge variant={isConnected ? "default" : "secondary"}>
+            {connectionBarStateLabels[connectionState]}
+          </Badge>
+        </div>
+
+        <div className="h-4 w-px bg-border" />
+
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <Bluetooth className="size-3.5" />
+          {status.deviceName ?? "--"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <Battery className="size-3.5" />
+          {formatBatteryVoltage(status.batteryVoltage)}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <Cpu className="size-3.5" />
+          {status.firmwareVersion ?? "--"}
+        </span>
       </div>
 
       <Button
